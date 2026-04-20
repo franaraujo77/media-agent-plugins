@@ -1,0 +1,21 @@
+{
+  "podcast": {
+    "name": "AI/ML Daily",
+    "description": "Daily digest of the latest AI and ML news",
+    "episode_title_template": "AI/ML Daily — {date}",
+    "language": "en"
+  },
+  "sources": [
+    { "type": "rss", "url": "https://arxiv.org/rss/cs.AI", "label": "ArXiv AI", "max_items": 5 },
+    { "type": "rss", "url": "https://www.deepmind.com/blog/rss.xml", "label": "DeepMind Blog", "max_items": 3 },
+    { "type": "scrape", "url": "https://huggingface.co/blog", "label": "HuggingFace Blog", "max_items": 3 }
+  ],
+  "tts": {
+    "voice": "alloy",
+    "model": "tts-1-hd"
+  },
+  "spotify": {
+    "show_id": "<your-show-id>",
+    "credentials_env": "SPOTIFY_EMAIL,SPOTIFY_PASSWORD"
+  }
+}

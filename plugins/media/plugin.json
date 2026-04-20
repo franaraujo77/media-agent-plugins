@@ -1,0 +1,12 @@
+{
+  "name": "media",
+  "version": "1.0.0",
+  "description": "Produce and publish AI-generated podcast episodes from configurable news sources.",
+  "skills": [
+    "./skills/news-fetch",
+    "./skills/script-generate",
+    "./skills/tts-generate",
+    "./skills/spotify-publish",
+    "./skills/podcast-daily"
+  ]
+}

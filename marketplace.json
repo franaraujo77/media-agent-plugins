@@ -1,0 +1,14 @@
+{
+  "name": "francisaraujo-marketplace",
+  "plugins": [
+    {
+      "name": "media",
+      "description": "Skills for producing and publishing AI-generated podcast episodes.",
+      "source": {
+        "type": "github",
+        "repo": "francisaraujo/ai-agent-plugins",
+        "ref": "main"
+      }
+    }
+  ]
+}
