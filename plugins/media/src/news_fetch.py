@@ -66,12 +66,15 @@ def run(config_path: str) -> None:
     all_items: list[dict] = []
     for source in config["sources"]:
         max_items = source.get("max_items", 5)
-        if source["type"] == "rss":
-            all_items.extend(fetch_rss(source["url"], source["label"], max_items))
-        elif source["type"] == "scrape":
-            all_items.extend(fetch_scrape(source["url"], source["label"], max_items))
-        else:
-            print(f"Unknown source type: {source['type']}", file=sys.stderr)
+        try:
+            if source["type"] == "rss":
+                all_items.extend(fetch_rss(source["url"], source["label"], max_items))
+            elif source["type"] == "scrape":
+                all_items.extend(fetch_scrape(source["url"], source["label"], max_items))
+            else:
+                print(f"Unknown source type: {source['type']}", file=sys.stderr)
+        except Exception as exc:
+            print(f"Warning: failed to fetch {source['label']}: {exc}", file=sys.stderr)
 
     unique = deduplicate(all_items)
     output = Path("output/news-items.json")
