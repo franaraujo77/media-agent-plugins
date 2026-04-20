@@ -58,13 +58,18 @@ def generate_script(
 
 
 def run(config_path: str) -> None:
+    news_path = Path("output/news-items.json")
+    if not news_path.exists():
+        sys.exit("Error: output/news-items.json not found. Run news-fetch first.")
+
     config = json.loads(Path(config_path).read_text())
     podcast = config["podcast"]
-    news_items = json.loads(Path("output/news-items.json").read_text())
+    news_items = json.loads(news_path.read_text())
     today = date.today().strftime("%B %d, %Y")
 
     script = generate_script(podcast["name"], podcast["description"], today, news_items)
 
+    Path("output").mkdir(exist_ok=True)
     Path("output/script.txt").write_text(script)
     print(f"Generated script ({len(script.split())} words) → output/script.txt")
 
