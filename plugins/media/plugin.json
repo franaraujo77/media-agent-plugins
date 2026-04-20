@@ -2,6 +2,7 @@
   "name": "media",
   "version": "1.0.0",
   "description": "Produce and publish AI-generated podcast episodes from configurable news sources.",
+  "author": { "name": "francisaraujo", "email": "francis.araujo@gmail.com" },
   "skills": [
     "./skills/news-fetch",
     "./skills/script-generate",
