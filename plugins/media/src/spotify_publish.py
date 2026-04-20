@@ -29,29 +29,31 @@ def publish(
 ) -> str:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+        try:
+            page = browser.new_page()
 
-        page.goto("https://creators.spotify.com/pod/login")
-        page.get_by_label("Email address").fill(email)
-        page.get_by_label("Password").fill(password)
-        page.get_by_role("button", name="Log In").click()
-        page.wait_for_url("**/dashboard**", timeout=15000)
+            page.goto("https://creators.spotify.com/pod/login")
+            page.get_by_label("Email address").fill(email)
+            page.get_by_label("Password").fill(password)
+            page.get_by_role("button", name="Log In").click()
+            page.wait_for_url("**/dashboard**", timeout=15000)
 
-        page.goto(f"https://creators.spotify.com/pod/show/{show_id}/episodes/new")
+            page.goto(f"https://creators.spotify.com/pod/show/{show_id}/episodes/new")
 
-        with page.expect_file_chooser() as fc_info:
-            page.get_by_text("Select a file").click()
-        fc_info.value.set_files(str(audio_path.resolve()))
-        page.get_by_text("Upload complete").wait_for(timeout=120000)
+            with page.expect_file_chooser() as fc_info:
+                page.get_by_text("Select a file").click()
+            fc_info.value.set_files(str(audio_path.resolve()))
+            page.get_by_text("Upload complete").wait_for(timeout=120000)
 
-        page.get_by_placeholder("Episode title").fill(episode_title)
-        page.get_by_placeholder("What's this episode about?").fill(description)
+            page.get_by_placeholder("Episode title").fill(episode_title)
+            page.get_by_placeholder("What's this episode about?").fill(description)
 
-        page.get_by_role("button", name="Publish Now").click()
-        page.wait_for_url("**/episodes/**", timeout=30000)
+            page.get_by_role("button", name="Publish Now").click()
+            page.wait_for_url("**/episodes/**", timeout=30000)
 
-        episode_url = page.url
-        browser.close()
+            episode_url = page.url
+        finally:
+            browser.close()
     return episode_url
 
 
@@ -68,7 +70,10 @@ def run(config_path: str) -> None:
     podcast = config["podcast"]
     spotify = config["spotify"]
 
-    email, password = load_credentials(spotify["credentials_env"])
+    try:
+        email, password = load_credentials(spotify["credentials_env"])
+    except KeyError as exc:
+        sys.exit(f"Error: environment variable {exc} is not set. Check credentials_env in config.")
     today = date.today().strftime("%Y-%m-%d")
     episode_title = render_episode_title(podcast["episode_title_template"], today)
 
