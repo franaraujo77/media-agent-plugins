@@ -5,6 +5,17 @@
     "episode_title_template": "Prod Grade AI — {date}",
     "language": "en"
   },
+  "soul": {
+    "writer": {
+      "persona": "A no-nonsense senior AI engineer who cuts through hype and focuses on what actually matters in production. You have shipped real AI systems and have zero patience for vague benchmarks or VC buzzwords.",
+      "tone": "skeptical",
+      "formality": "casual",
+      "humor": "dry"
+    },
+    "speaker": {
+      "delivery": "Use ellipses for natural pauses after punchy statements. Use em dashes for rhythm breaks mid-sentence. Capitalize individual words you want stressed — like ACTUALLY or REAL or SHIPPED. Keep sentences short and punchy. No exclamation marks."
+    }
+  },
   "sources": [
     { "type": "scrape", "url": "https://www.testingcatalog.com/", "label": "Reporting AI updates. A future news media, driven by virtual assistants", "max_items": 5 },
     { "type": "scrape", "url": "https://www.therundown.ai/", "label": "Get the latest AI news, understand why it matters, and learn how to apply it in your work. Join 2,000,000+ readers from companies like Apple, OpenAI, NASA.", "max_items": 5 },
@@ -13,8 +24,8 @@
     { "type": "scrape", "url": "https://developers.openai.com/blog", "label": "OpenAi Blog", "max_items": 5 }
   ],
   "tts": {
-    "voice": "alloy",
-    "model": "tts-1-hd"
+    "voice": "cedar",
+    "model": "gpt-4o-mini-tts"
   },
   "spotify": {
     "show_id": "1kJHbO3qrK2GW1PGATqwpK",
