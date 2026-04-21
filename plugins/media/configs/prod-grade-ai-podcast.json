@@ -6,6 +6,7 @@
     "language": "en"
   },
   "soul": "plugins/media/souls/influence.md",
+  "lookback_days": 7,
   "sources": [
     { "type": "scrape", "url": "https://claude.com/blog", "label": "Claude Code Blog", "max_items": 8 },
     { "type": "scrape", "url": "https://developers.openai.com/blog", "label": "OpenAi Blog", "max_items": 8 },
