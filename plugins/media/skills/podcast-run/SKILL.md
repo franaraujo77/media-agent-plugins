@@ -2,7 +2,7 @@
 name: podcast-run
 description: Run the full podcast pipeline end-to-end — fetch news, generate script, create audio, publish to Spotify. Pass a config file as the argument. Calls all four media skills in sequence.
 argument-hint: <path-to-config.json>
-allowed-tools: Bash(python3 *), Bash(rm *)
+allowed-tools: Bash(rm *), Skill
 ---
 
 # podcast-run
@@ -11,31 +11,23 @@ Run the complete pipeline for the podcast defined in the config file provided as
 
 ## Steps
 
-Run each command in sequence. Stop and report the full error message if any step fails — do not continue to the next step.
+Invoke each skill in sequence. Stop and report the full error message if any step fails — do not continue to the next step.
 
 1. Fetch news:
 
-   ```bash
-   python3 plugins/media/src/news_fetch.py <argument>
-   ```
+   Use the `Skill` tool with skill `media:news-fetch` and argument `<argument>`.
 
 2. Generate script:
 
-   ```bash
-   python3 plugins/media/src/script_generate.py <argument>
-   ```
+   Use the `Skill` tool with skill `media:script-generate` and argument `<argument>`.
 
 3. Generate audio:
 
-   ```bash
-   python3 plugins/media/src/tts_generate.py <argument>
-   ```
+   Use the `Skill` tool with skill `media:tts-generate` and argument `<argument>`.
 
 4. Publish to Spotify:
 
-   ```bash
-   python3 plugins/media/src/spotify_publish.py <argument>
-   ```
+   Use the `Skill` tool with skill `media:spotify-publish` and argument `<argument>`.
 
 5. Clean up temp files:
 
