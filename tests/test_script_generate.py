@@ -156,3 +156,64 @@ def test_build_user_prompt_no_delivery_section_when_soul_has_no_speaker():
     soul = {"writer": {"persona": "a host"}}
     prompt = build_user_prompt("Show", "desc", "April 21, 2026", NEWS_ITEMS, soul)
     assert "Delivery style" not in prompt
+
+
+def test_generate_script_uses_soul_system_prompt():
+    soul = {"writer": {"persona": "a test host", "tone": "neutral", "formality": "casual", "humor": "none"}}
+    mock_content = MagicMock()
+    mock_content.text = "Script."
+    mock_response = MagicMock()
+    mock_response.content = [mock_content]
+
+    with patch("plugins.media.src.script_generate.anthropic.Anthropic") as mock_cls:
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = mock_response
+        mock_cls.return_value = mock_client
+        generate_script("Show", "desc", "April 21, 2026", NEWS_ITEMS, soul)
+
+    call_kwargs = mock_client.messages.create.call_args.kwargs
+    assert "a test host" in call_kwargs["system"][0]["text"]
+
+
+def test_generate_script_uses_default_prompt_when_no_soul():
+    mock_content = MagicMock()
+    mock_content.text = "Script."
+    mock_response = MagicMock()
+    mock_response.content = [mock_content]
+
+    with patch("plugins.media.src.script_generate.anthropic.Anthropic") as mock_cls:
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = mock_response
+        mock_cls.return_value = mock_client
+        generate_script("Show", "desc", "April 21, 2026", NEWS_ITEMS)
+
+    call_kwargs = mock_client.messages.create.call_args.kwargs
+    assert "professional podcast host" in call_kwargs["system"][0]["text"]
+
+
+def test_run_passes_soul_from_config(tmp_path, monkeypatch):
+    soul = {"writer": {"persona": "a host", "tone": "neutral", "formality": "casual", "humor": "none"}}
+    config = {
+        "podcast": {"name": "AI Daily", "description": "AI news"},
+        "soul": soul,
+    }
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps(config))
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    (output_dir / "news-items.json").write_text(json.dumps(NEWS_ITEMS))
+    monkeypatch.chdir(tmp_path)
+
+    mock_content = MagicMock()
+    mock_content.text = "Script."
+    mock_response = MagicMock()
+    mock_response.content = [mock_content]
+
+    with patch("plugins.media.src.script_generate.anthropic.Anthropic") as mock_cls:
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = mock_response
+        mock_cls.return_value = mock_client
+        run(str(config_file))
+
+    call_kwargs = mock_client.messages.create.call_args.kwargs
+    assert "a host" in call_kwargs["system"][0]["text"]

@@ -73,7 +73,7 @@ Target: 450-750 words. Write only the spoken script — no labels, no stage dire
 
 
 def generate_script(
-    podcast_name: str, description: str, today: str, news_items: list[dict]
+    podcast_name: str, description: str, today: str, news_items: list[dict], soul: dict | None = None
 ) -> str:
     client = anthropic.Anthropic()
     response = client.messages.create(
@@ -82,14 +82,14 @@ def generate_script(
         system=[
             {
                 "type": "text",
-                "text": SYSTEM_PROMPT,
+                "text": build_system_prompt(soul),
                 "cache_control": {"type": "ephemeral"},
             }
         ],
         messages=[
             {
                 "role": "user",
-                "content": build_user_prompt(podcast_name, description, today, news_items),
+                "content": build_user_prompt(podcast_name, description, today, news_items, soul),
             }
         ],
     )
@@ -105,8 +105,9 @@ def run(config_path: str) -> None:
     podcast = config["podcast"]
     news_items = json.loads(news_path.read_text())
     today = date.today().strftime("%B %d, %Y")
+    soul = resolve_soul(config)
 
-    script = generate_script(podcast["name"], podcast["description"], today, news_items)
+    script = generate_script(podcast["name"], podcast["description"], today, news_items, soul)
 
     Path("output").mkdir(exist_ok=True)
     Path("output/script.txt").write_text(script)
