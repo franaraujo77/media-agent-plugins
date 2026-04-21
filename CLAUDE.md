@@ -51,9 +51,9 @@ Skills communicate through files in `output/` (gitignored):
 
 | Skill | Purpose |
 |---|---|
-| `news-fetch` | Parse RSS feeds + Playwright scraping, deduplicate by URL |
-| `script-generate` | Call Claude Sonnet 4.6 with prompt caching (ephemeral) to produce 450–750 word script |
-| `tts-generate` | Call OpenAI TTS; truncates input to 4096 chars |
+| `news-fetch` | Parse RSS feeds + Playwright scraping, deduplicate by URL; optional `lookback_days` filter |
+| `script-generate` | Call Claude Sonnet 4.6 with prompt caching (ephemeral) to produce 450–4000 word script |
+| `tts-generate` | Call OpenAI TTS; splits scripts >4096 chars into chunks and stitches audio |
 | `spotify-publish` | Playwright browser automation against Spotify for Creators |
 | `podcast-daily` | Orchestrator — runs all four skills sequentially |
 
