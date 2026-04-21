@@ -114,3 +114,52 @@ Set these in `~/.claude/settings.json` under `env`:
 # Or the full pipeline in one command:
 /media:podcast-run plugins/media/configs/my-podcast.json
 ```
+
+## Scheduling the pipeline
+
+Use the `/schedule` skill to create a recurring remote trigger that runs the full pipeline automatically on a cron schedule. The trigger runs a fresh Claude Code remote session in Anthropic's cloud — it is not tied to your local machine.
+
+```
+/schedule
+```
+
+When prompted, choose **Create** and provide:
+
+- **Prompt** — the instruction the remote agent will follow, e.g.:
+
+  ```
+  Run /media:podcast-run plugins/media/configs/my-podcast.json
+  Stop immediately and report the full error if any step fails.
+  ```
+
+- **Schedule** — cron expression in UTC. Common examples (times shown for America/Sao_Paulo → UTC):
+
+  | Frequency | Local (Sao Paulo) | Cron (UTC) |
+  |---|---|---|
+  | Daily at 7am | 7:00 BRT (UTC-3) | `0 10 * * *` |
+  | Weekdays at 7am | 7:00 BRT (UTC-3) | `0 10 * * 1-5` |
+  | Weekly on Monday 7am | 7:00 BRT (UTC-3) | `0 10 * * 1` |
+
+  Minimum interval is 1 hour.
+
+- **Repo** — `https://github.com/franaraujo77/media-agent-plugins`
+
+### Environment variables for scheduled runs
+
+The remote agent does not have access to your local machine. Environment variables must be available in the remote session. Set them in your Claude Code settings at [claude.ai/code/settings](https://claude.ai/code/settings) under the **Environment** section:
+
+| Variable | Required for |
+|---|---|
+| `OPENAI_API_KEY` | `tts-generate` |
+| `SPOTIFY_EMAIL` | `spotify-publish` |
+| `SPOTIFY_PASSWORD` | `spotify-publish` |
+
+`ANTHROPIC_API_KEY` is **not required** — `script-generate` generates the script natively using the remote session's Claude context.
+
+### Managing scheduled triggers
+
+```
+/schedule          # list, update, or run triggers
+```
+
+To delete a trigger, visit [claude.ai/code/scheduled](https://claude.ai/code/scheduled).
