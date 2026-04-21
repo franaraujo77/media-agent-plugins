@@ -1,7 +1,7 @@
 import feedparser
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urljoin
 
@@ -61,6 +61,25 @@ def deduplicate(items: list[dict]) -> list[dict]:
     return result
 
 
+def filter_by_lookback(items: list[dict], lookback_days: int) -> tuple[list[dict], int]:
+    from dateutil import parser as dateutil_parser
+    cutoff = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+    kept = []
+    dropped = 0
+    for item in items:
+        try:
+            published = dateutil_parser.parse(item["published"])
+            if published.tzinfo is None:
+                published = published.replace(tzinfo=timezone.utc)
+            if published >= cutoff:
+                kept.append(item)
+            else:
+                dropped += 1
+        except Exception:
+            kept.append(item)
+    return kept, dropped
+
+
 def run(config_path: str) -> None:
     config = json.loads(Path(config_path).read_text())
     all_items: list[dict] = []
@@ -77,6 +96,10 @@ def run(config_path: str) -> None:
             print(f"Warning: failed to fetch {source['label']}: {exc}", file=sys.stderr)
 
     unique = deduplicate(all_items)
+    lookback_days = config.get("lookback_days")
+    if lookback_days:
+        unique, dropped = filter_by_lookback(unique, lookback_days)
+        print(f"Filtered {dropped} items older than {lookback_days} days ({len(unique)} kept)")
     output = Path("output/news-items.json")
     output.parent.mkdir(exist_ok=True)
     output.write_text(json.dumps(unique, indent=2))

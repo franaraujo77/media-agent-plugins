@@ -1,7 +1,8 @@
 import json
 import pytest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
-from plugins.media.src.news_fetch import fetch_rss, deduplicate, run
+from plugins.media.src.news_fetch import fetch_rss, deduplicate, run, filter_by_lookback
 
 
 def _mock_feed(entries_data: list[dict]):
@@ -91,3 +92,81 @@ def test_run_writes_output_file(tmp_path, monkeypatch):
     output = json.loads((tmp_path / "output" / "news-items.json").read_text())
     assert len(output) == 1
     assert output[0]["title"] == "Article"
+
+
+def _item(title: str, published: str) -> dict:
+    return {"title": title, "url": f"https://example.com/{title}", "published": published, "source": "X", "summary": ""}
+
+
+def test_filter_keeps_items_within_window():
+    now = datetime.now(timezone.utc)
+    items = [
+        _item("recent", now.isoformat()),
+        _item("old", (now - timedelta(days=8)).isoformat()),
+    ]
+    kept, dropped = filter_by_lookback(items, 7)
+    assert [i["title"] for i in kept] == ["recent"]
+    assert dropped == 1
+
+
+def test_filter_keeps_items_with_unparseable_date():
+    items = [_item("x", "not-a-date")]
+    kept, dropped = filter_by_lookback(items, 7)
+    assert len(kept) == 1
+    assert dropped == 0
+
+
+def test_filter_drops_item_just_outside_window():
+    now = datetime.now(timezone.utc)
+    items = [_item("edge", (now - timedelta(days=7, hours=1)).isoformat())]
+    kept, dropped = filter_by_lookback(items, 7)
+    assert len(kept) == 0
+    assert dropped == 1
+
+
+def test_filter_handles_naive_datetime():
+    # Naive datetimes (no timezone) should be treated as UTC
+    now_naive = datetime.utcnow()
+    items = [_item("naive", now_naive.isoformat())]
+    kept, dropped = filter_by_lookback(items, 7)
+    assert len(kept) == 1
+    assert dropped == 0
+
+
+def test_run_filters_by_lookback_days(tmp_path, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    import json
+    from unittest.mock import patch
+    from plugins.media.src.news_fetch import run
+
+    now = datetime.now(timezone.utc)
+    config = {
+        "sources": [{"type": "rss", "url": "https://example.com/rss", "label": "Test", "max_items": 5}],
+        "lookback_days": 3,
+    }
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps(config))
+
+    fresh_entry = {
+        "title": "Fresh", "summary": "s", "link": "https://example.com/fresh",
+        "published": now.isoformat(),
+    }
+    stale_entry = {
+        "title": "Stale", "summary": "s", "link": "https://example.com/stale",
+        "published": (now - timedelta(days=5)).isoformat(),
+    }
+
+    mock_feed = MagicMock()
+    mock_feed.entries = [fresh_entry, stale_entry]
+
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    with patch("plugins.media.src.news_fetch.feedparser") as mock_fp:
+        mock_fp.parse.return_value = mock_feed
+        run(str(config_file))
+
+    items = json.loads((output_dir / "news-items.json").read_text())
+    assert len(items) == 1
+    assert items[0]["title"] == "Fresh"
