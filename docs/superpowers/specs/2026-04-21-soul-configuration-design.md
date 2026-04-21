@@ -78,6 +78,8 @@ The native generation path in `script-generate/SKILL.md` is updated to also read
 | `plugins/media/configs/prod-grade-ai-podcast.json` | Add inline `soul` to demonstrate the feature |
 | `plugins/media/souls/` | New directory for reusable soul files (initially empty) |
 | `plugins/media/plugin.json` | Bump version to `1.2.0` |
+| `docs/usage.md` (new) | Full usage guide covering soul configuration: schema reference, inline vs file, valid values, examples |
+| `README.md` | Add link to `docs/usage.md` under a "Documentation" section |
 
 ## What does NOT change
 
@@ -93,3 +95,5 @@ The native generation path in `script-generate/SKILL.md` is updated to also read
 - Delivery cues from the speaker soul appear naturally in the script text
 - A show without a `soul` field behaves exactly as before
 - Soul files in `plugins/media/souls/` can be referenced by path from any config
+- `docs/usage.md` covers the full soul schema with examples
+- `README.md` links to `docs/usage.md`
