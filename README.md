@@ -23,3 +23,7 @@ claude plugin install media@franaraujo77-marketplace
 
 - [Installation guide](docs/superpowers/specs/2026-04-20-media-plugin-design.md#installation)
 - [Usage](docs/superpowers/specs/2026-04-20-media-plugin-design.md#usage)
+
+## License
+
+[MIT](LICENSE)
