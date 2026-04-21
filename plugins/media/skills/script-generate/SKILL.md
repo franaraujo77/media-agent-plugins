@@ -52,7 +52,7 @@ Requires `output/news-items.json` to exist (run news-fetch first).
 
    Structure:
    - Brief intro (2-3 sentences, welcome listeners, mention the date)
-   - 2-3 segments per news item (4-5 sentences each, conversational tone, no URLs)
+   - 2-3 segments per news item (5-10 sentences each, conversational tone, no URLs)
    - Brief closing (1-2 sentences)
 
    Target: 450-4000 words. Write only the spoken script — no labels, no stage directions.
