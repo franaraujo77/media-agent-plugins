@@ -222,3 +222,4 @@ def test_run_passes_soul_from_config(tmp_path, monkeypatch):
 def test_build_user_prompt_targets_450_to_4000_words():
     prompt = build_user_prompt("My Podcast", "A description.", "April 21, 2026", [], soul=None)
     assert "450-4000 words" in prompt
+    assert "450-750 words" not in prompt
