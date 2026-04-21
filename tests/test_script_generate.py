@@ -109,3 +109,9 @@ def test_resolve_soul_loads_from_file(tmp_path):
     soul_file.write_text(json.dumps(soul))
     config = {"soul": str(soul_file)}
     assert resolve_soul(config) == soul
+
+
+def test_resolve_soul_exits_on_missing_file(tmp_path):
+    config = {"soul": str(tmp_path / "nonexistent.json")}
+    with pytest.raises(SystemExit):
+        resolve_soul(config)

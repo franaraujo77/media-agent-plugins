@@ -10,7 +10,13 @@ def resolve_soul(config: dict) -> dict | None:
     if soul is None:
         return None
     if isinstance(soul, str):
-        return json.loads(Path(soul).read_text())
+        path = Path(soul)
+        if not path.exists():
+            sys.exit(f"Error: soul file not found: {soul}")
+        try:
+            return json.loads(path.read_text())
+        except json.JSONDecodeError as e:
+            sys.exit(f"Error: soul file is not valid JSON: {soul} ({e})")
     return soul
 
 
