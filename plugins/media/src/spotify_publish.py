@@ -11,7 +11,11 @@ def render_episode_title(template: str, date_str: str) -> str:
 
 
 def build_description(news_items: list[dict]) -> str:
-    return "\n".join(f"- {item['title']} ({item['source']})" for item in news_items)
+    lines = []
+    for item in news_items:
+        lines.append(f"- {item['title']} ({item['source']})")
+        lines.append(f"  {item['url']}")
+    return "\n".join(lines)
 
 
 def load_credentials(credentials_env: str) -> tuple[str, str]:

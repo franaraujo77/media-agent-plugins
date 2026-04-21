@@ -26,7 +26,7 @@ def test_build_description_formats_items():
         {"title": "Article 2", "source": "HuggingFace", "url": "https://b.com", "summary": ""},
     ]
     result = build_description(items)
-    assert result == "- Article 1 (ArXiv)\n- Article 2 (HuggingFace)"
+    assert result == "- Article 1 (ArXiv)\n  https://a.com\n- Article 2 (HuggingFace)\n  https://b.com"
 
 
 def test_build_description_empty_list():
@@ -83,4 +83,4 @@ def test_run_calls_publish_with_rendered_title(tmp_path, monkeypatch):
     assert call_kwargs.kwargs["show_id"] == "abc123"
     assert call_kwargs.kwargs["email"] == "test@example.com"
     assert "AI Daily" in call_kwargs.kwargs["episode_title"]
-    assert "- Article (ArXiv)" in call_kwargs.kwargs["description"]
+    assert "- Article (ArXiv)\n  https://a.com" in call_kwargs.kwargs["description"]
