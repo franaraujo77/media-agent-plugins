@@ -5,6 +5,8 @@ from datetime import date
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
+PROFILE_DIR = Path.home() / ".spotify-creator-profile"
+
 
 def render_episode_title(template: str, date_str: str) -> str:
     return template.replace("{date}", date_str)
@@ -31,33 +33,66 @@ def publish(
     description: str,
     audio_path: Path,
 ) -> str:
+    PROFILE_DIR.mkdir(exist_ok=True)
+    target_url = f"https://creators.spotify.com/pod/show/{show_id}/episode/wizard"
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        context = p.chromium.launch_persistent_context(
+            str(PROFILE_DIR),
+            headless=False,
+            slow_mo=50,
+        )
         try:
-            page = browser.new_page()
+            page = context.pages[0] if context.pages else context.new_page()
 
-            page.goto("https://creators.spotify.com/pod/login")
-            page.get_by_label("Email address").fill(email)
-            page.get_by_label("Password").fill(password)
-            page.get_by_role("button", name="Log In").click()
-            page.wait_for_url("**/dashboard**", timeout=15000)
+            # Navigate directly to the target — Spotify redirects to login with return_to if needed
+            page.goto(target_url, wait_until="domcontentloaded", timeout=20000)
+            page.wait_for_timeout(3000)
 
-            page.goto(f"https://creators.spotify.com/pod/show/{show_id}/episodes/new")
+            if "episode/wizard" not in page.url:
+                # Redirected to login — complete the auth flow
+                page.evaluate("document.querySelector('#accept-recommended-btn-handler')?.click()")
+                page.wait_for_timeout(1500)
+                page.get_by_role("button", name="Continue with Spotify").click()
+                page.wait_for_selector("#username", timeout=15000)
+                page.click("#username")
+                page.keyboard.type(email, delay=50)
+                page.keyboard.press("Enter")
+                print("A browser window is open. Check your email for a verification code and enter it.")
+                # Wait for password form (after 2FA) or direct redirect to wizard
+                page.wait_for_function(
+                    "() => document.querySelector('#password') !== null || "
+                    "      window.location.href.includes('episode/wizard')",
+                    timeout=300000,
+                )
+                if page.query_selector("#password"):
+                    page.fill("#password", password)
+                    page.click("button[type=submit]")
+                # Wait for any creators.spotify.com page (login complete)
+                page.wait_for_url("**/creators.spotify.com/**", timeout=60000)
+                # Navigate to the wizard now that we're authenticated
+                page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(2000)
 
             with page.expect_file_chooser() as fc_info:
-                page.get_by_text("Select a file").click()
+                page.get_by_test_id("uploadAreaWrapper").get_by_role("button", name="Select a file").click()
             fc_info.value.set_files(str(audio_path.resolve()))
-            page.get_by_text("Upload complete").wait_for(timeout=120000)
+            # Upload auto-advances to Details page; wait for status-message = "Preview ready!"
+            page.get_by_test_id("status-message").wait_for(timeout=300000)
 
-            page.get_by_placeholder("Episode title").fill(episode_title)
-            page.get_by_placeholder("What's this episode about?").fill(description)
+            page.fill("#title-input", episode_title)
+            page.locator('[name="description"]').click()
+            page.locator('[name="description"]').fill(description)
 
-            page.get_by_role("button", name="Publish Now").click()
-            page.wait_for_url("**/episodes/**", timeout=30000)
+            page.get_by_role("button", name="Next").click()
+            # Review step — select "Now" and publish
+            page.locator('label[for="publish-date-now"]').wait_for(timeout=15000)
+            page.locator('label[for="publish-date-now"]').click()
+            page.get_by_role("button", name="Publish").click()
+            page.wait_for_url("**/episodes", timeout=60000)
 
             episode_url = page.url
         finally:
-            browser.close()
+            context.close()
     return episode_url
 
 
