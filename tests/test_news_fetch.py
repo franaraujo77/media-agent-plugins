@@ -126,7 +126,7 @@ def test_filter_drops_item_just_outside_window():
 
 def test_filter_handles_naive_datetime():
     # Naive datetimes (no timezone) should be treated as UTC
-    now_naive = datetime.utcnow()
+    now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
     items = [_item("naive", now_naive.isoformat())]
     kept, dropped = filter_by_lookback(items, 7)
     assert len(kept) == 1
@@ -134,11 +134,6 @@ def test_filter_handles_naive_datetime():
 
 
 def test_run_filters_by_lookback_days(tmp_path, monkeypatch):
-    from datetime import datetime, timedelta, timezone
-    import json
-    from unittest.mock import patch
-    from plugins.media.src.news_fetch import run
-
     now = datetime.now(timezone.utc)
     config = {
         "sources": [{"type": "rss", "url": "https://example.com/rss", "label": "Test", "max_items": 5}],

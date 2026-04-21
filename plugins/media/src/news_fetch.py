@@ -97,7 +97,7 @@ def run(config_path: str) -> None:
 
     unique = deduplicate(all_items)
     lookback_days = config.get("lookback_days")
-    if lookback_days:
+    if lookback_days is not None:
         unique, dropped = filter_by_lookback(unique, lookback_days)
         print(f"Filtered {dropped} items older than {lookback_days} days ({len(unique)} kept)")
     output = Path("output/news-items.json")
