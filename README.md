@@ -21,8 +21,7 @@ claude plugin install media@franaraujo77-media-agent-plugins
 
 ## Docs
 
-- [Installation guide](docs/superpowers/specs/2026-04-20-media-plugin-design.md#installation)
-- [Usage](docs/superpowers/specs/2026-04-20-media-plugin-design.md#usage)
+- [Usage guide](docs/usage.md) — configuration reference, soul setup, environment variables
 
 ## License
 
