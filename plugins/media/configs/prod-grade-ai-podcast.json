@@ -5,7 +5,7 @@
     "episode_title_template": "Prod Grade AI — {date}",
     "language": "en"
   },
-  "soul": "plugins/media/souls/influence.json",
+  "soul": "plugins/media/souls/influence.md",
   "sources": [
     { "type": "scrape", "url": "https://www.testingcatalog.com/", "label": "Reporting AI updates. A future news media, driven by virtual assistants", "max_items": 5 },
     { "type": "scrape", "url": "https://www.therundown.ai/", "label": "Get the latest AI news, understand why it matters, and learn how to apply it in your work. Join 2,000,000+ readers from companies like Apple, OpenAI, NASA.", "max_items": 5 },

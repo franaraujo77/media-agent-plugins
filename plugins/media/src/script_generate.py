@@ -13,6 +13,8 @@ def resolve_soul(config: dict) -> dict | None:
         path = Path(soul)
         if not path.exists():
             sys.exit(f"Error: soul file not found: {soul}")
+        if path.suffix == ".md":
+            return {"_system_prompt": path.read_text()}
         try:
             return json.loads(path.read_text())
         except json.JSONDecodeError as e:
@@ -30,6 +32,8 @@ SYSTEM_PROMPT = (
 def build_system_prompt(soul: dict | None) -> str:
     if soul is None:
         return SYSTEM_PROMPT
+    if "_system_prompt" in soul:
+        return soul["_system_prompt"]
     writer = soul.get("writer", {})
     persona = writer.get("persona", "a professional podcast host")
     tone = writer.get("tone", "neutral")
