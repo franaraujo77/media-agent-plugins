@@ -45,12 +45,18 @@ def build_system_prompt(soul: dict | None) -> str:
 
 
 def build_user_prompt(
-    podcast_name: str, description: str, today: str, news_items: list[dict]
+    podcast_name: str, description: str, today: str, news_items: list[dict], soul: dict | None = None
 ) -> str:
     news_text = "\n\n".join(
         f"**{item['title']}** ({item['source']})\n{item['summary']}"
         for item in news_items
     )
+    delivery = ""
+    if soul and soul.get("speaker", {}).get("delivery"):
+        delivery = (
+            f"\nDelivery style: {soul['speaker']['delivery']} "
+            "Apply these cues throughout the script so the text reads naturally when converted to audio."
+        )
     return f"""Write a podcast script for "{podcast_name}" — {description}.
 
 Today's date: {today}
@@ -63,7 +69,7 @@ Structure:
 - One segment per news item (2-3 sentences each, conversational tone, no URLs)
 - Brief closing (1-2 sentences)
 
-Target: 450-750 words. Write only the spoken script — no labels, no stage directions."""
+Target: 450-750 words. Write only the spoken script — no labels, no stage directions.{delivery}"""
 
 
 def generate_script(

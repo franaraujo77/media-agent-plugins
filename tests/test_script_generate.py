@@ -139,3 +139,20 @@ def test_build_system_prompt_uses_formality_and_humor():
     prompt = build_system_prompt(soul)
     assert "professional" in prompt
     assert "light" in prompt
+
+
+def test_build_user_prompt_includes_delivery_when_soul_has_speaker():
+    soul = {"speaker": {"delivery": "Pause after key points."}}
+    prompt = build_user_prompt("Show", "desc", "April 21, 2026", NEWS_ITEMS, soul)
+    assert "Pause after key points." in prompt
+
+
+def test_build_user_prompt_no_delivery_section_when_no_soul():
+    prompt = build_user_prompt("Show", "desc", "April 21, 2026", NEWS_ITEMS, None)
+    assert "Delivery style" not in prompt
+
+
+def test_build_user_prompt_no_delivery_section_when_soul_has_no_speaker():
+    soul = {"writer": {"persona": "a host"}}
+    prompt = build_user_prompt("Show", "desc", "April 21, 2026", NEWS_ITEMS, soul)
+    assert "Delivery style" not in prompt
