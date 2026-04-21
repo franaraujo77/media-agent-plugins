@@ -52,10 +52,10 @@ Requires `output/news-items.json` to exist (run news-fetch first).
 
    Structure:
    - Brief intro (2-3 sentences, welcome listeners, mention the date)
-   - One segment per news item (2-3 sentences each, conversational tone, no URLs)
+   - 2-3 segments per news item (4-5 sentences each, conversational tone, no URLs)
    - Brief closing (1-2 sentences)
 
-   Target: 450-750 words. Write only the spoken script — no labels, no stage directions.
+   Target: 450-4000 words. Write only the spoken script — no labels, no stage directions.
 
    If soul has `speaker.delivery`: append → "Delivery style: <soul.speaker.delivery> Apply these cues throughout the script so the text reads naturally when converted to audio."
 
