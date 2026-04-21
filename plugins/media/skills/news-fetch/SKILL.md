@@ -7,7 +7,7 @@ allowed-tools: Bash(python3 *)
 
 # news-fetch
 
-Fetch today's news items for the podcast defined in the config file provided as the argument.
+Fetch news items covering the latest 24 hours for the podcast defined in the config file provided as the argument.
 
 ## Steps
 
