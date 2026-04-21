@@ -1,4 +1,6 @@
 import json
+import re
+import shutil
 import sys
 from pathlib import Path
 from openai import OpenAI
@@ -6,16 +8,48 @@ from openai import OpenAI
 MAX_TTS_CHARS = 4096
 
 
+def split_into_chunks(text: str, max_chars: int = MAX_TTS_CHARS) -> list[str]:
+    if len(text) <= max_chars:
+        return [text]
+    chunks = []
+    while text:
+        if len(text) <= max_chars:
+            chunks.append(text)
+            break
+        segment = text[:max_chars]
+        last_boundary = None
+        for m in re.finditer(r'\. (?=[A-Z])', segment):
+            last_boundary = m.start() + 1  # position just after the period
+        if last_boundary:
+            chunks.append(text[:last_boundary].strip())
+            text = text[last_boundary:].strip()
+        else:
+            chunks.append(segment)
+            text = text[max_chars:]
+    return [c for c in chunks if c]
+
+
 def generate_audio(script: str, voice: str, model: str, output_path: Path) -> None:
-    if len(script) > MAX_TTS_CHARS:
-        script = script[:MAX_TTS_CHARS]
     client = OpenAI()
-    response = client.audio.speech.create(
-        model=model,
-        voice=voice,
-        input=script,
-    )
-    response.stream_to_file(str(output_path))
+    chunks = split_into_chunks(script)
+    if len(chunks) == 1:
+        response = client.audio.speech.create(model=model, voice=voice, input=chunks[0])
+        response.stream_to_file(str(output_path))
+        return
+    chunks_dir = output_path.parent / "chunks"
+    chunks_dir.mkdir(exist_ok=True)
+    chunk_paths = []
+    try:
+        for i, chunk in enumerate(chunks):
+            chunk_path = chunks_dir / f"chunk_{i:03d}.mp3"
+            response = client.audio.speech.create(model=model, voice=voice, input=chunk)
+            response.stream_to_file(str(chunk_path))
+            chunk_paths.append(chunk_path)
+        with open(output_path, "wb") as outfile:
+            for path in chunk_paths:
+                outfile.write(path.read_bytes())
+    finally:
+        shutil.rmtree(chunks_dir, ignore_errors=True)
 
 
 def run(config_path: str) -> None:
