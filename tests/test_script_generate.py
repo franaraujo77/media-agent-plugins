@@ -1,7 +1,8 @@
 import json
 import pytest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
-from plugins.media.src.script_generate import build_user_prompt, generate_script, run
+from plugins.media.src.script_generate import build_user_prompt, generate_script, run, resolve_soul
 
 
 NEWS_ITEMS = [
@@ -89,3 +90,22 @@ def test_run_writes_script_file(tmp_path, monkeypatch):
         run(str(config_file))
 
     assert (tmp_path / "output" / "script.txt").read_text() == "Hello podcast world."
+
+
+def test_resolve_soul_returns_none_when_absent():
+    config = {"podcast": {"name": "Test"}}
+    assert resolve_soul(config) is None
+
+
+def test_resolve_soul_returns_inline_dict():
+    soul = {"writer": {"persona": "a host"}}
+    config = {"soul": soul}
+    assert resolve_soul(config) == soul
+
+
+def test_resolve_soul_loads_from_file(tmp_path):
+    soul = {"writer": {"persona": "from file"}}
+    soul_file = tmp_path / "soul.json"
+    soul_file.write_text(json.dumps(soul))
+    config = {"soul": str(soul_file)}
+    assert resolve_soul(config) == soul

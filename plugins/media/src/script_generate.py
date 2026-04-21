@@ -4,6 +4,16 @@ import sys
 from datetime import date
 from pathlib import Path
 
+
+def resolve_soul(config: dict) -> dict | None:
+    soul = config.get("soul")
+    if soul is None:
+        return None
+    if isinstance(soul, str):
+        return json.loads(Path(soul).read_text())
+    return soul
+
+
 SYSTEM_PROMPT = (
     "You are a professional podcast host writing scripts for a daily news podcast. "
     "Your style is conversational, engaging, and concise. "
