@@ -73,7 +73,7 @@ Structure:
 - One segment per news item (2-3 sentences each, conversational tone, no URLs)
 - Brief closing (1-2 sentences)
 
-Target: 450-750 words. Write only the spoken script — no labels, no stage directions.{delivery}"""
+Target: 450-4000 words. Write only the spoken script — no labels, no stage directions.{delivery}"""
 
 
 def generate_script(

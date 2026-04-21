@@ -217,3 +217,8 @@ def test_run_passes_soul_from_config(tmp_path, monkeypatch):
 
     call_kwargs = mock_client.messages.create.call_args.kwargs
     assert "a host" in call_kwargs["system"][0]["text"]
+
+
+def test_build_user_prompt_targets_450_to_4000_words():
+    prompt = build_user_prompt("My Podcast", "A description.", "April 21, 2026", [], soul=None)
+    assert "450-4000 words" in prompt
