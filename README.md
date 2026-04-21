@@ -10,7 +10,7 @@ A Claude Code plugin that produces and publishes AI-generated podcast episodes f
 | `script-generate` | `/media:script-generate` | Generate a podcast script from news items using Claude |
 | `tts-generate` | `/media:tts-generate` | Convert script to audio using OpenAI TTS |
 | `spotify-publish` | `/media:spotify-publish` | Upload and publish episode to Spotify for Creators |
-| `podcast-daily` | `/media:podcast-daily` | Run the full pipeline end-to-end |
+| `podcast-run` | `/media:podcast-run` | Run the full pipeline end-to-end |
 
 ## Quick Install
 

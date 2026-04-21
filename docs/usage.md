@@ -112,5 +112,5 @@ Set these in `~/.claude/settings.json` under `env`:
 /media:spotify-publish plugins/media/configs/my-podcast.json
 
 # Or the full pipeline in one command:
-/media:podcast-daily plugins/media/configs/my-podcast.json
+/media:podcast-run plugins/media/configs/my-podcast.json
 ```

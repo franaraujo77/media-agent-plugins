@@ -55,7 +55,7 @@ Skills communicate through files in `output/` (gitignored):
 | `script-generate` | Call Claude Sonnet 4.6 with prompt caching (ephemeral) to produce 450–4000 word script |
 | `tts-generate` | Call OpenAI TTS; splits scripts >4096 chars into chunks and stitches audio |
 | `spotify-publish` | Playwright browser automation against Spotify for Creators |
-| `podcast-daily` | Orchestrator — runs all four skills sequentially |
+| `podcast-run` | Orchestrator — runs all four skills sequentially |
 
 ### Plugin Manifests
 

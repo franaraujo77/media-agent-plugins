@@ -1,11 +1,11 @@
 ---
-name: podcast-daily
+name: podcast-run
 description: Run the full podcast pipeline end-to-end — fetch news, generate script, create audio, publish to Spotify. Pass a config file as the argument. Calls all four media skills in sequence.
 argument-hint: <path-to-config.json>
 allowed-tools: Bash(python3 *), Bash(rm *)
 ---
 
-# podcast-daily
+# podcast-run
 
 Run the complete pipeline for the podcast defined in the config file provided as the argument.
 
