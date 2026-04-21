@@ -68,6 +68,7 @@ def test_generate_audio_stitches_multiple_chunks(tmp_path):
         generate_audio(script, "alloy", "tts-1-hd", output_path)
 
     assert mock_client.audio.speech.create.call_count == 2
+    assert output_path.read_bytes() == b"mp3data" + b"mp3data"
 
 
 def test_generate_audio_splits_long_script_into_chunks(tmp_path):
