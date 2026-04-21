@@ -2,7 +2,7 @@ import json
 import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from plugins.media.src.script_generate import build_user_prompt, generate_script, run, resolve_soul
+from plugins.media.src.script_generate import build_user_prompt, generate_script, run, resolve_soul, build_system_prompt
 
 
 NEWS_ITEMS = [
@@ -115,3 +115,27 @@ def test_resolve_soul_exits_on_missing_file(tmp_path):
     config = {"soul": str(tmp_path / "nonexistent.json")}
     with pytest.raises(SystemExit):
         resolve_soul(config)
+
+
+def test_build_system_prompt_default_when_no_soul():
+    prompt = build_system_prompt(None)
+    assert "professional podcast host" in prompt
+
+
+def test_build_system_prompt_uses_persona():
+    soul = {"writer": {"persona": "a cynical engineer", "tone": "skeptical", "formality": "casual", "humor": "dry"}}
+    prompt = build_system_prompt(soul)
+    assert "a cynical engineer" in prompt
+
+
+def test_build_system_prompt_uses_tone():
+    soul = {"writer": {"persona": "a host", "tone": "skeptical", "formality": "casual", "humor": "dry"}}
+    prompt = build_system_prompt(soul)
+    assert "skeptical" in prompt
+
+
+def test_build_system_prompt_uses_formality_and_humor():
+    soul = {"writer": {"persona": "a host", "tone": "neutral", "formality": "professional", "humor": "light"}}
+    prompt = build_system_prompt(soul)
+    assert "professional" in prompt
+    assert "light" in prompt

@@ -27,6 +27,23 @@ SYSTEM_PROMPT = (
 )
 
 
+def build_system_prompt(soul: dict | None) -> str:
+    if soul is None:
+        return SYSTEM_PROMPT
+    writer = soul.get("writer", {})
+    persona = writer.get("persona", "a professional podcast host")
+    tone = writer.get("tone", "neutral")
+    formality = writer.get("formality", "mixed")
+    humor = writer.get("humor", "none")
+    return (
+        f"You are {persona}. "
+        f"Your tone is {tone}. "
+        f"Your writing style is {formality}. "
+        f"Your humor is {humor}. "
+        "Write scripts that reflect this personality consistently."
+    )
+
+
 def build_user_prompt(
     podcast_name: str, description: str, today: str, news_items: list[dict]
 ) -> str:
