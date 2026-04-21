@@ -39,8 +39,9 @@ Skills provided:
 ## Repo Structure
 
 ```
-ai-agent-plugins/
-├── marketplace.json
+media-agent-plugins/
+├── .claude-plugin/
+│   └── marketplace.json
 ├── plugins/
 │   └── media/
 │       ├── plugin.json
@@ -141,13 +142,13 @@ Each podcast is driven by a JSON config file in `plugins/media/configs/`. Multip
 ### 1. Add the marketplace
 
 ```bash
-claude plugin marketplace add francisaraujo/ai-agent-plugins
+claude plugin marketplace add franaraujo77/media-agent-plugins
 ```
 
 ### 2. Install the plugin
 
 ```bash
-claude plugin install media@francisaraujo-marketplace
+claude plugin install media@franaraujo77-media-agent-plugins
 ```
 
 Or interactively via `/plugin`.

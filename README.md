@@ -16,7 +16,7 @@ A Claude Code plugin that produces and publishes AI-generated podcast episodes f
 
 ```bash
 claude plugin marketplace add franaraujo77/media-agent-plugins
-claude plugin install media@franaraujo77-marketplace
+claude plugin install media@franaraujo77-media-agent-plugins
 ```
 
 ## Docs
