@@ -11,6 +11,11 @@
       "name": "media",
       "description": "Skills for producing and publishing AI-generated podcast episodes.",
       "source": "./plugins/media"
+    },
+    {
+      "name": "instagram",
+      "description": "Skills for configuring Instagram integration and publishing carousel posts via the Meta Graph API.",
+      "source": "./plugins/instagram"
     }
   ]
 }
