@@ -7,3 +7,7 @@ __pycache__/
 .venv/
 venv/
 env/
+
+# Podcast configs: only the public example is tracked; all others are local-only.
+plugins/media/configs/*.json
+!plugins/media/configs/ai-ml-podcast.json
