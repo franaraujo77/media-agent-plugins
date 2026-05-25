@@ -1,6 +1,6 @@
 {
   "name": "instagram",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Configure Instagram integration and create carousel, story, and reel posts via the Meta Graph API.",
   "author": { "name": "francisaraujo", "email": "francis.araujo@gmail.com" },
   "skills": [

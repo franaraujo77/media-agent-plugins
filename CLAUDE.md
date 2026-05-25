@@ -14,6 +14,12 @@ pip install -r plugins/media/requirements.txt
 playwright install chromium
 ```
 
+**Enable repo git hooks (one-time, per clone):**
+```bash
+git config core.hooksPath .githooks
+```
+The pre-commit hook runs `scripts/validate-plugins.sh`, which calls `claude plugin validate` on every `plugins/<name>/.claude-plugin/plugin.json`. If the `claude` CLI is not on PATH, validation is skipped (non-fatal).
+
 **Run tests:**
 ```bash
 pytest tests/ -v                          # all tests
@@ -59,8 +65,8 @@ Skills communicate through files in `output/` (gitignored):
 
 ### Plugin Manifests
 
-- `marketplace.json` — registry entry pointing to this repo
-- `plugins/media/plugin.json` — skill list, metadata, author
+- `.claude-plugin/marketplace.json` — registry entry pointing to this repo
+- `plugins/<name>/.claude-plugin/plugin.json` — skill list, metadata, author (one per plugin)
 
 ### Configuration
 
