@@ -87,6 +87,18 @@ def publish(
             # Review step — select "Now" and publish
             page.locator('label[for="publish-date-now"]').wait_for(timeout=15000)
             page.locator('label[for="publish-date-now"]').click()
+            # Spotify keeps the Publish button disabled while it finishes
+            # processing the uploaded audio — this can take far longer than the
+            # default 30s click timeout. Wait for the review form's submit button
+            # to become enabled before clicking.
+            page.wait_for_function(
+                """() => {
+                    const btn = [...document.querySelectorAll('button')]
+                        .find(b => b.getAttribute('form') === 'review-form');
+                    return btn && !btn.disabled;
+                }""",
+                timeout=600000,
+            )
             page.get_by_role("button", name="Publish").click()
             page.wait_for_url("**/episodes", timeout=60000)
 
