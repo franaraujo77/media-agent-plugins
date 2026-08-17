@@ -13,7 +13,7 @@ def resolve_soul(config: dict) -> dict | None:
         path = Path(soul)
         if not path.exists():
             sys.exit(f"Error: soul file not found: {soul}")
-        if path.suffix == ".md":
+        if path.suffix.lower() in (".md", ".markdown"):
             return {"_system_prompt": path.read_text()}
         try:
             return json.loads(path.read_text())

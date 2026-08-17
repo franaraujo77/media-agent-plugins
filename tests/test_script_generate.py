@@ -111,6 +111,35 @@ def test_resolve_soul_loads_from_file(tmp_path):
     assert resolve_soul(config) == soul
 
 
+def test_resolve_soul_loads_markdown_as_system_prompt(tmp_path):
+    soul_file = tmp_path / "soul.md"
+    soul_file.write_text("# Soul\n\nA no-nonsense engineer.")
+    config = {"soul": str(soul_file)}
+    assert resolve_soul(config) == {"_system_prompt": "# Soul\n\nA no-nonsense engineer."}
+
+
+def test_resolve_soul_loads_markdown_regardless_of_suffix_case(tmp_path):
+    soul_file = tmp_path / "SOUL.MD"
+    soul_file.write_text("Upper case suffix.")
+    config = {"soul": str(soul_file)}
+    assert resolve_soul(config) == {"_system_prompt": "Upper case suffix."}
+
+
+def test_resolve_soul_loads_markdown_with_long_suffix(tmp_path):
+    soul_file = tmp_path / "soul.markdown"
+    soul_file.write_text("Long suffix.")
+    config = {"soul": str(soul_file)}
+    assert resolve_soul(config) == {"_system_prompt": "Long suffix."}
+
+
+def test_resolve_soul_exits_on_invalid_json(tmp_path):
+    soul_file = tmp_path / "soul.json"
+    soul_file.write_text("{not json")
+    config = {"soul": str(soul_file)}
+    with pytest.raises(SystemExit):
+        resolve_soul(config)
+
+
 def test_resolve_soul_exits_on_missing_file(tmp_path):
     config = {"soul": str(tmp_path / "nonexistent.json")}
     with pytest.raises(SystemExit):
@@ -120,6 +149,11 @@ def test_resolve_soul_exits_on_missing_file(tmp_path):
 def test_build_system_prompt_default_when_no_soul():
     prompt = build_system_prompt(None)
     assert "professional podcast host" in prompt
+
+
+def test_build_system_prompt_passes_markdown_soul_through_verbatim():
+    soul = {"_system_prompt": "# Soul\n\nA no-nonsense engineer."}
+    assert build_system_prompt(soul) == "# Soul\n\nA no-nonsense engineer."
 
 
 def test_build_system_prompt_uses_persona():
