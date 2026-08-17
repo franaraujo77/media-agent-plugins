@@ -2,7 +2,15 @@ import json
 import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from plugins.media.src.script_generate import build_user_prompt, generate_script, run, resolve_soul, build_system_prompt
+from plugins.media.src.script_generate import (
+    build_user_prompt,
+    generate_script,
+    run,
+    resolve_soul,
+    build_system_prompt,
+    load_api_key,
+    NO_API_KEY_EXIT,
+)
 
 
 NEWS_ITEMS = [
@@ -62,6 +70,7 @@ def test_generate_script_uses_sonnet_model():
 
 
 def test_run_writes_script_file(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     config = {
         "podcast": {
             "name": "AI Daily",
@@ -90,6 +99,85 @@ def test_run_writes_script_file(tmp_path, monkeypatch):
         run(str(config_file))
 
     assert (tmp_path / "output" / "script.txt").read_text() == "Hello podcast world."
+
+
+def test_load_api_key_prefers_environment(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "from-env")
+    env_file = tmp_path / ".env"
+    env_file.write_text("ANTHROPIC_API_KEY=from-file")
+    assert load_api_key(env_file) == "from-env"
+
+
+def test_load_api_key_falls_back_to_env_file(tmp_path, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text("ANTHROPIC_API_KEY=from-file")
+    assert load_api_key(env_file) == "from-file"
+
+
+def test_load_api_key_ignores_comments_and_other_keys(tmp_path, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "# ANTHROPIC_API_KEY=commented-out\n"
+        "OPENAI_API_KEY=other\n"
+        "\n"
+        "export ANTHROPIC_API_KEY=\"quoted-value\"\n"
+    )
+    assert load_api_key(env_file) == "quoted-value"
+
+
+def test_load_api_key_returns_none_when_env_file_missing(tmp_path, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert load_api_key(tmp_path / "nonexistent.env") is None
+
+
+def test_load_api_key_ignores_blank_environment_value(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "   ")
+    env_file = tmp_path / ".env"
+    env_file.write_text("ANTHROPIC_API_KEY=from-file")
+    assert load_api_key(env_file) == "from-file"
+
+
+def test_run_exits_with_no_api_key_code_when_key_absent(tmp_path, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr("plugins.media.src.script_generate.ENV_FILE", tmp_path / "absent.env")
+
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({"podcast": {"name": "AI Daily", "description": "AI news"}}))
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    (output_dir / "news-items.json").write_text(json.dumps(NEWS_ITEMS))
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(SystemExit) as exc:
+        run(str(config_file))
+
+    assert exc.value.code == NO_API_KEY_EXIT
+
+
+def test_run_passes_loaded_key_to_client(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "key-123")
+
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({"podcast": {"name": "AI Daily", "description": "AI news"}}))
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    (output_dir / "news-items.json").write_text(json.dumps(NEWS_ITEMS))
+    monkeypatch.chdir(tmp_path)
+
+    mock_content = MagicMock()
+    mock_content.text = "Script."
+    mock_response = MagicMock()
+    mock_response.content = [mock_content]
+
+    with patch("plugins.media.src.script_generate.anthropic.Anthropic") as mock_cls:
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = mock_response
+        mock_cls.return_value = mock_client
+        run(str(config_file))
+
+    assert mock_cls.call_args.kwargs["api_key"] == "key-123"
 
 
 def test_resolve_soul_returns_none_when_absent():
@@ -226,6 +314,7 @@ def test_generate_script_uses_default_prompt_when_no_soul():
 
 
 def test_run_passes_soul_from_config(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     soul = {"writer": {"persona": "a host", "tone": "neutral", "formality": "casual", "humor": "none"}}
     config = {
         "podcast": {"name": "AI Daily", "description": "AI news"},

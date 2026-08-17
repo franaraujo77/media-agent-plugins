@@ -1,8 +1,38 @@
 import anthropic
 import json
+import os
 import sys
 from datetime import date
 from pathlib import Path
+
+
+ENV_FILE = Path.home() / ".config" / "media-agent" / ".env"
+
+# Distinct exit code so script-generate can fall back to native generation
+# without shelling out a separate env-var probe first.
+NO_API_KEY_EXIT = 3
+
+
+def load_api_key(env_file: Path | None = None) -> str | None:
+    """Return the Anthropic key from the environment, else from the dotenv file."""
+    key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if key:
+        return key
+
+    path = ENV_FILE if env_file is None else env_file
+    if not path.exists():
+        return None
+
+    for line in path.read_text().splitlines():
+        line = line.strip().removeprefix("export ").strip()
+        if not line or line.startswith("#"):
+            continue
+        name, sep, value = line.partition("=")
+        if sep and name.strip() == "ANTHROPIC_API_KEY":
+            value = value.strip().strip("\"'").strip()
+            if value:
+                return value
+    return None
 
 
 def resolve_soul(config: dict) -> dict | None:
@@ -77,9 +107,14 @@ Target: 450-4000 words. Write only the spoken script — no labels, no stage dir
 
 
 def generate_script(
-    podcast_name: str, description: str, today: str, news_items: list[dict], soul: dict | None = None
+    podcast_name: str,
+    description: str,
+    today: str,
+    news_items: list[dict],
+    soul: dict | None = None,
+    api_key: str | None = None,
 ) -> str:
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(api_key=api_key)
     response = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=8192,
@@ -105,13 +140,24 @@ def run(config_path: str) -> None:
     if not news_path.exists():
         sys.exit("Error: output/news-items.json not found. Run news-fetch first.")
 
+    api_key = load_api_key()
+    if not api_key:
+        print(
+            f"No ANTHROPIC_API_KEY in the environment or {ENV_FILE}. "
+            "Generate the script natively instead.",
+            file=sys.stderr,
+        )
+        sys.exit(NO_API_KEY_EXIT)
+
     config = json.loads(Path(config_path).read_text())
     podcast = config["podcast"]
     news_items = json.loads(news_path.read_text())
     today = date.today().strftime("%B %d, %Y")
     soul = resolve_soul(config)
 
-    script = generate_script(podcast["name"], podcast["description"], today, news_items, soul)
+    script = generate_script(
+        podcast["name"], podcast["description"], today, news_items, soul, api_key
+    )
 
     Path("output").mkdir(exist_ok=True)
     Path("output/script.txt").write_text(script)

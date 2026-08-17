@@ -12,33 +12,34 @@ Requires `output/news-items.json` to exist (run news-fetch first).
 
 ## Steps
 
-1. Check whether `ANTHROPIC_API_KEY` is set:
-
-   ```bash
-   echo "${ANTHROPIC_API_KEY:+set}"
-   ```
-
-2. **If the API key is set** — run the script generation via Python:
+1. Run the script generation:
 
    ```bash
    python3 plugins/media/src/script_generate.py <argument>
    ```
 
-   Report the word count and confirm `output/script.txt` was written.
-   If the script errors, report the full error message.
+   The script reads the Anthropic key from `ANTHROPIC_API_KEY`, falling back to
+   `~/.config/media-agent/.env`. Do not probe for the key with a separate shell
+   command — the exit code tells you what to do:
 
-3. **If the API key is NOT set** — generate the script natively:
+   - **Exit 0** — report the word count and confirm `output/script.txt` was written. Done.
+   - **Exit 3** — no key is configured. Continue to step 2.
+   - **Any other exit** — report the full error message and stop.
+
+2. **Only if step 1 exited with code 3** — generate the script natively:
 
    - Read `output/news-items.json`
    - Read `<argument>` (the config file) to get `podcast.name`, `podcast.description`, and optionally `soul`
 
    **Resolve the soul:**
    - If `soul` is absent in the config → use the default system prompt below
-   - If `soul` is a string → read the JSON file at that path to get the soul object
+   - If `soul` is a string ending in `.md` or `.markdown` → read the file and use its entire contents as the system prompt
+   - If `soul` is any other string → read the JSON file at that path to get the soul object
    - If `soul` is an object → use it directly
 
    **Build the system prompt:**
    - If no soul: "You are a professional podcast host writing scripts for a daily news podcast. Your style is conversational, engaging, and concise. You summarize complex topics in plain language suitable for general audiences."
+   - If the soul is a markdown file: use its contents verbatim as the system prompt.
    - If soul present: "You are <soul.writer.persona>. Your tone is <soul.writer.tone>. Your writing style is <soul.writer.formality>. Your humor is <soul.writer.humor>. Write scripts that reflect this personality consistently."
 
    **Build the user prompt:**
