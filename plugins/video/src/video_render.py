@@ -1,0 +1,106 @@
+import argparse
+import sys
+import tempfile
+from pathlib import Path
+
+from plugins.video.src.backends import ffmpeg_backend, browser_backend
+from plugins.video.src.encode import mux_audio
+from plugins.video.src.presets import DEFAULT_PRESET
+from plugins.video.src.storyboard import (
+    Storyboard,
+    build_storyboard,
+    collect_images,
+    crop_warnings,
+    load_storyboard,
+    resolve_durations,
+    validate_images,
+)
+
+BACKENDS = {"ffmpeg": ffmpeg_backend, "browser": browser_backend}
+
+
+def select_backend(sb: Storyboard) -> tuple[str, str]:
+    if sb.backend is not None:
+        if sb.backend not in BACKENDS:
+            raise ValueError(
+                f"Unknown backend {sb.backend!r}. Allowed: {', '.join(sorted(BACKENDS))}"
+            )
+        return sb.backend, f"explicit --backend {sb.backend}"
+    captioned = [i for i, s in enumerate(sb.slides) if s.caption]
+    if captioned:
+        return "browser", f"{len(captioned)} of {len(sb.slides)} slides have captions"
+    return "ffmpeg", "no slide has a caption"
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Render images plus optional audio into an MP4."
+    )
+    parser.add_argument("storyboard", nargs="?", help="Path to a storyboard JSON file")
+    parser.add_argument("--images", help="Glob or directory of images")
+    parser.add_argument("--audio", help="Audio track to mux")
+    parser.add_argument("--output", help="Output path (default output/video.mp4)")
+    parser.add_argument("--preset", default=None,
+                        help="reel | story | square | landscape")
+    parser.add_argument("--fit", default=None, help="cover | contain")
+    parser.add_argument("--backend", default=None, help="ffmpeg | browser")
+    parser.add_argument("--seconds", type=float, default=None,
+                        help="Uniform per-slide duration")
+    parser.add_argument("--fps", type=int, default=None)
+    return parser.parse_args(argv)
+
+
+def storyboard_from_args(args: argparse.Namespace) -> Storyboard:
+    if args.storyboard and args.images:
+        raise ValueError(
+            "A storyboard path and --images are mutually exclusive. Pass one or the other."
+        )
+    if args.storyboard:
+        return load_storyboard(Path(args.storyboard))
+    if not args.images:
+        raise ValueError("Pass a storyboard path or --images.")
+
+    slides = [{"image": str(p)} for p in collect_images(args.images)]
+    if args.seconds is not None:
+        for slide in slides:
+            slide["seconds"] = args.seconds
+
+    data: dict = {"slides": slides, "preset": args.preset or DEFAULT_PRESET}
+    if args.audio:
+        data["audio"] = args.audio
+    if args.output:
+        data["output"] = args.output
+    if args.fit:
+        data["fit"] = args.fit
+    if args.backend:
+        data["backend"] = args.backend
+    if args.fps:
+        data["fps"] = args.fps
+    return build_storyboard(data)
+
+
+def run(argv: list[str]) -> Path:
+    sb = storyboard_from_args(parse_args(argv))
+    validate_images(sb.slides)
+    resolve_durations(sb)
+
+    for warning in crop_warnings(sb):
+        print(f"Warning: {warning}")
+
+    name, reason = select_backend(sb)
+    print(f"Backend: {name} ({reason})")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        silent = BACKENDS[name].render(sb, Path(tmp))
+        sb.output.parent.mkdir(parents=True, exist_ok=True)
+        output = mux_audio(silent, sb.audio, sb.output)
+
+    print(f"Rendered → {output}")
+    return output
+
+
+if __name__ == "__main__":
+    try:
+        run(sys.argv[1:])
+    except (ValueError, RuntimeError) as exc:
+        sys.exit(f"Error: {exc}")
