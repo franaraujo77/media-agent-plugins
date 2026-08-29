@@ -29,6 +29,12 @@ using only local tooling — ffmpeg and Playwright. No external AI service is in
   by frame through the Web Animations API and captured with Playwright. Slower, but
   supports full typography for captions.
 
+The browser backend writes one full-resolution PNG per frame to a temporary directory
+before encoding, so peak scratch space is roughly `duration x fps x PNG size`. At
+1080x1920/30fps a 3-minute video is 5,400 PNGs — on the order of 8-25 GB of `/tmp`, and
+exhausting it fails with `ENOSPC`. For long captioned renders, point `TMPDIR` at a volume
+with room, or lower `--fps`. The ffmpeg backend needs no scratch space.
+
 The script prints which backend it chose and why, e.g. `Backend: ffmpeg (no slide has a caption)`.
 
 **Storyboard format.** A storyboard is a JSON file describing the target preset, an
@@ -56,6 +62,7 @@ optional audio track, and a list of slides:
 - With `audio` set, omit `seconds` on every slide to distribute the audio duration evenly
   across them, or set `seconds` on every slide (mixing the two is an error when audio is present).
 
+A storyboard path and the flags below are mutually exclusive — passing both is an error.
 Without a storyboard file, pass images and options directly:
 
 ```bash
@@ -70,6 +77,7 @@ python3 plugins/video/src/video_render.py --images "assets/*.png" --audio output
 ```bash
 claude plugin marketplace add franaraujo77/media-agent-plugins
 claude plugin install media@franaraujo77-media-agent-plugins
+claude plugin install video@franaraujo77-media-agent-plugins
 ```
 
 ## Docs

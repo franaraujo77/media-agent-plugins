@@ -45,8 +45,7 @@ plugins/video/
     backends/
       __init__.py
       ffmpeg_backend.py
-      browser_backend.py
-      scene.html
+      browser_backend.py   # the HTML scene template is inlined here as _TEMPLATE
 ```
 
 `plugins/video/.claude-plugin/plugin.json` follows the existing manifests:
@@ -258,8 +257,7 @@ The body collects inputs, runs the renderer, confirms `output/video.mp4` exists,
 | `plugins/video/src/presets.py` | New — preset table |
 | `plugins/video/src/encode.py` | New — frames->mp4, audio mux, ffprobe helpers |
 | `plugins/video/src/backends/ffmpeg_backend.py` | New — zoompan + xfade |
-| `plugins/video/src/backends/browser_backend.py` | New — WAAPI seek + Playwright capture |
-| `plugins/video/src/backends/scene.html` | New — HTML scene template |
+| `plugins/video/src/backends/browser_backend.py` | New — WAAPI seek + Playwright capture, with the HTML scene template inlined as `_TEMPLATE` |
 | `plugins/video/src/__init__.py`, `src/backends/__init__.py` | New — package markers |
 | `tests/test_presets.py` | New |
 | `tests/test_storyboard.py` | New |

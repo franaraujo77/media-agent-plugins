@@ -32,9 +32,9 @@ Uses only local tooling — ffmpeg and Playwright. No external AI service.
 
    The quick form also accepts `--output <path>` (default `output/video.mp4`),
    `--fit cover|contain`, `--backend ffmpeg|browser`, `--seconds <float>` (uniform per-slide
-   duration), and `--fps <int>`. These flags apply only to the `--images` quick form — when a
-   storyboard JSON path is given, it is loaded as-is and every other flag is ignored, so set
-   `output`, `fit`, `backend`, and `fps` inside the JSON instead.
+   duration), and `--fps <int>`. These flags apply only to the `--images` quick form — passing
+   any of them together with a storyboard path is an **error**, not a silent override. Set
+   `output`, `fit`, `backend`, `audio`, `seconds`, and `fps` inside the JSON instead.
 
 3. Report the backend line the script prints (`Backend: ffmpeg (...)` or
    `Backend: browser (...)`), then watch for two different kinds of `Warning:` line and
@@ -75,6 +75,13 @@ mixing is fine.
 
 Chosen automatically unless `--backend` is passed: any slide with a caption uses the
 browser backend (HTML/CSS, full typography); otherwise ffmpeg (faster, pan/zoom only).
+
+**Temp-disk cost of the browser backend.** It writes one full-resolution PNG per frame
+into a temporary directory before encoding, so the peak scratch space is roughly
+`duration x fps x PNG size`. At 1080x1920/30fps a 3-minute video is 5,400 PNGs — on the
+order of 8-25 GB of `/tmp` — and running out surfaces as an `ENOSPC` failure. For long
+captioned renders, check free space first, point `TMPDIR` at a roomier volume, or lower
+`--fps`. The ffmpeg backend streams and needs no such scratch space.
 
 ## Feeding the publish skills
 
