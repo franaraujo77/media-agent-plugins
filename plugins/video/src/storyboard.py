@@ -3,6 +3,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from plugins.video.src.encode import probe_duration, probe_image_size
 from plugins.video.src.presets import Preset, resolve_preset, DEFAULT_PRESET
 
 DEFAULT_SECONDS = 4.0
@@ -87,3 +88,67 @@ def validate_images(slides: list[Slide]) -> None:
     missing = [str(s.image) for s in slides if not s.image.exists()]
     if missing:
         raise ValueError("Image files not found:\n  " + "\n  ".join(missing))
+
+
+CROP_WARN_THRESHOLD = 0.15
+
+
+def overlap_total(sb: Storyboard) -> float:
+    return sum(s.transition_seconds for s in sb.slides[1:] if s.transition != "cut")
+
+
+def total_duration(sb: Storyboard) -> float:
+    return sum(s.seconds or 0.0 for s in sb.slides) - overlap_total(sb)
+
+
+def resolve_durations(sb: Storyboard) -> Storyboard:
+    explicit = [i for i, s in enumerate(sb.slides) if s.seconds is not None]
+    omitted = [i for i, s in enumerate(sb.slides) if s.seconds is None]
+
+    if sb.audio is None:
+        for s in sb.slides:
+            if s.seconds is None:
+                s.seconds = DEFAULT_SECONDS
+        return sb
+
+    audio_seconds = probe_duration(sb.audio)
+
+    if explicit and omitted:
+        raise ValueError(
+            "Cannot mix explicit and omitted 'seconds' when audio is present. "
+            f"Slides with 'seconds': {explicit}. Slides without: {omitted}. "
+            "Set 'seconds' on every slide, or on none of them."
+        )
+
+    if omitted:
+        per_slide = (audio_seconds + overlap_total(sb)) / len(sb.slides)
+        for s in sb.slides:
+            s.seconds = per_slide
+        return sb
+
+    drift = total_duration(sb) - audio_seconds
+    if abs(drift) > 0.5:
+        print(
+            f"Warning: video is {total_duration(sb):.1f}s but audio is "
+            f"{audio_seconds:.1f}s ({drift:+.1f}s). Output will be trimmed to the shorter."
+        )
+    return sb
+
+
+def crop_warnings(sb: Storyboard) -> list[str]:
+    if sb.fit != "cover":
+        return []
+    target = sb.preset.width / sb.preset.height
+    warnings = []
+    for s in sb.slides:
+        width, height = probe_image_size(s.image)
+        source = width / height
+        # cover scales to fill, so the discarded fraction is along the longer axis
+        kept = min(source, target) / max(source, target)
+        discarded = 1.0 - kept
+        if discarded > CROP_WARN_THRESHOLD:
+            warnings.append(
+                f"{s.image}: {width}x{height} cropped to "
+                f"{sb.preset.width}x{sb.preset.height} discards {discarded:.0%} of the image"
+            )
+    return warnings
