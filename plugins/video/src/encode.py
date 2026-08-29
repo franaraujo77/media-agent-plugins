@@ -49,3 +49,36 @@ def probe_image_size(path: Path) -> tuple[int, int]:
     ]).replace("x", ",")
     width, height = out.split(",")[:2]
     return int(width), int(height)
+
+
+FRAME_PATTERN = "f%05d.png"
+
+
+def frames_to_video(frames_dir: Path, fps: int, output: Path) -> Path:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    run_ffmpeg([
+        "-framerate", str(fps),
+        "-i", str(frames_dir / FRAME_PATTERN),
+        "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+        "-pix_fmt", "yuv420p",
+        str(output),
+    ])
+    return output
+
+
+def mux_audio(video: Path, audio: Path | None, output: Path) -> Path:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if audio is None:
+        run_ffmpeg(["-i", str(video), "-c", "copy", str(output)])
+        return output
+    run_ffmpeg([
+        "-i", str(video),
+        "-i", str(audio),
+        "-map", "0:v", "-map", "1:a",
+        "-c:v", "copy",
+        "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+        "-shortest",
+        "-movflags", "+faststart",
+        str(output),
+    ])
+    return output
