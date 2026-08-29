@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "franaraujo77-media-agent-plugins",
-  "description": "Podcast production skills: fetch news, generate scripts, convert to audio, publish to Spotify.",
+  "description": "Media production skills: AI-generated podcast episodes, Instagram publishing, and local video rendering.",
   "owner": {
     "name": "francisaraujo",
     "email": "francis.araujo@gmail.com"
