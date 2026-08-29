@@ -13,6 +13,7 @@ from plugins.video.src.storyboard import (
     crop_warnings,
     load_storyboard,
     resolve_durations,
+    validate_audio,
     validate_images,
 )
 
@@ -25,7 +26,7 @@ def select_backend(sb: Storyboard) -> tuple[str, str]:
             raise ValueError(
                 f"Unknown backend {sb.backend!r}. Allowed: {', '.join(sorted(BACKENDS))}"
             )
-        return sb.backend, f"explicit --backend {sb.backend}"
+        return sb.backend, f"explicit backend: {sb.backend}"
     captioned = [i for i, s in enumerate(sb.slides) if s.caption]
     if captioned:
         return "browser", f"{len(captioned)} of {len(sb.slides)} slides have captions"
@@ -50,12 +51,23 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+STORYBOARD_EXCLUSIVE_FLAGS = (
+    "images", "audio", "output", "preset", "fit", "backend", "seconds", "fps",
+)
+
+
 def storyboard_from_args(args: argparse.Namespace) -> Storyboard:
-    if args.storyboard and args.images:
-        raise ValueError(
-            "A storyboard path and --images are mutually exclusive. Pass one or the other."
-        )
     if args.storyboard:
+        # Spec: flags and a storyboard path are mutually exclusive; passing both is
+        # an error rather than a silent precedence rule.
+        supplied = [f"--{n}" for n in STORYBOARD_EXCLUSIVE_FLAGS
+                    if getattr(args, n) is not None]
+        if supplied:
+            raise ValueError(
+                f"A storyboard path and {', '.join(supplied)} are mutually exclusive. "
+                "Pass a storyboard, or the flags — not both. Set these fields inside "
+                "the storyboard JSON instead."
+            )
         return load_storyboard(Path(args.storyboard))
     if not args.images:
         raise ValueError("Pass a storyboard path or --images.")
@@ -82,6 +94,7 @@ def storyboard_from_args(args: argparse.Namespace) -> Storyboard:
 def run(argv: list[str]) -> Path:
     sb = storyboard_from_args(parse_args(argv))
     validate_images(sb.slides)
+    validate_audio(sb)
     resolve_durations(sb)
 
     for warning in crop_warnings(sb):

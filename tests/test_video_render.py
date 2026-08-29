@@ -53,6 +53,44 @@ def test_flags_and_storyboard_together_are_an_error(tmp_path):
     assert "mutually exclusive" in str(exc.value).lower()
 
 
+@pytest.mark.parametrize("flag,value", [
+    ("--audio", "e.mp3"),
+    ("--output", "o/v.mp4"),
+    ("--preset", "reel"),
+    ("--fit", "contain"),
+    ("--backend", "browser"),
+    ("--seconds", "2.5"),
+    ("--fps", "60"),
+])
+def test_every_flag_conflicts_with_a_storyboard_path(tmp_path, flag, value):
+    """Spec: flags and a storyboard path are mutually exclusive; passing both is an
+    error rather than a silent precedence rule."""
+    board = tmp_path / "sb.json"
+    board.write_text(json.dumps({"slides": [{"image": "a.png"}]}))
+    args = parse_args([str(board), flag, value])
+    with pytest.raises(ValueError) as exc:
+        storyboard_from_args(args)
+    message = str(exc.value).lower()
+    assert "mutually exclusive" in message
+    assert flag in message
+
+
+def test_storyboard_error_names_every_conflicting_flag(tmp_path):
+    board = tmp_path / "sb.json"
+    board.write_text(json.dumps({"slides": [{"image": "a.png"}]}))
+    args = parse_args([str(board), "--preset", "reel", "--audio", "x.mp3", "--fps", "60"])
+    with pytest.raises(ValueError) as exc:
+        storyboard_from_args(args)
+    message = str(exc.value)
+    assert "--preset" in message and "--audio" in message and "--fps" in message
+
+
+def test_a_storyboard_path_alone_is_accepted(tmp_path):
+    board = tmp_path / "sb.json"
+    board.write_text(json.dumps({"slides": [{"image": "a.png"}], "preset": "reel"}))
+    assert storyboard_from_args(parse_args([str(board)])).preset.name == "reel"
+
+
 def test_neither_storyboard_nor_images_is_an_error():
     args = parse_args([])
     with pytest.raises(ValueError):
@@ -159,3 +197,43 @@ def test_end_to_end_render_produces_a_correct_mp4(tmp_path):
     assert frame_rate == "10/1"
     assert int(frames) == 20          # 2 slides x 1.0s x 10fps, cut transition
     assert float(duration) == pytest.approx(2.0, abs=0.15)
+
+
+@pytest.mark.integration
+def test_mixed_cut_then_fade_renders(tmp_path):
+    """Real ffmpeg. concat emits timebase 1/1000000 while zoompan emits 1/fps, and
+    xfade refuses mismatched input timebases — so a cut followed by a fade aborted
+    the render. Only a real render catches it; the filtergraph substrings all match."""
+    import subprocess
+    from plugins.video.src.encode import run_ffmpeg
+
+    images = []
+    for i, colour in enumerate(["red", "green", "blue"]):
+        path = tmp_path / f"{i}.png"
+        run_ffmpeg(["-f", "lavfi", "-i", f"color=c={colour}:size=320x240",
+                    "-frames:v", "1", str(path)])
+        images.append(path)
+
+    out = tmp_path / "video.mp4"
+    board = tmp_path / "sb.json"
+    board.write_text(json.dumps({
+        "preset": "square",
+        "fps": 10,
+        "output": str(out),
+        "slides": [
+            {"image": str(images[0]), "seconds": 2.0},                       # default fade
+            {"image": str(images[1]), "seconds": 2.0, "transition": "cut"},
+            {"image": str(images[2]), "seconds": 2.0, "transition": "fade"},
+        ],
+    }))
+
+    run([str(board)])
+
+    assert out.exists()
+    duration = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+         "-of", "default=noprint_wrappers=1:nokey=1", str(out)],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    # 3 x 2.0s, minus the single 0.5s fade overlap into slide 2
+    assert float(duration) == pytest.approx(5.5, abs=0.15)

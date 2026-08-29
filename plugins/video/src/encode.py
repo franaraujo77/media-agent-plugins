@@ -69,7 +69,8 @@ def frames_to_video(frames_dir: Path, fps: int, output: Path) -> Path:
 def mux_audio(video: Path, audio: Path | None, output: Path) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
     if audio is None:
-        run_ffmpeg(["-i", str(video), "-c", "copy", str(output)])
+        run_ffmpeg(["-i", str(video), "-c", "copy",
+                    "-movflags", "+faststart", str(output)])
         return output
     run_ffmpeg([
         "-i", str(video),

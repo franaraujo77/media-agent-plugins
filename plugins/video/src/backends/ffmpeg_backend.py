@@ -4,7 +4,14 @@ from plugins.video.src.encode import run_ffmpeg
 from plugins.video.src.storyboard import Storyboard
 
 ZOOM_MAX = 1.18
-PAN_SHIFT = 0.03
+# Pans hold a constant zoom and travel the full headroom that zoom creates.
+# Matched to the browser backend's scale(1.15) so both backends pan by a
+# comparable amount (+-7.5% of the frame from centre).
+PAN_ZOOM = 1.15
+# The whole horizontal headroom at PAN_ZOOM: iw - iw/zoom. Deriving the travel
+# from the zoom (rather than a fixed fraction of iw) is what keeps zoompan from
+# clamping x and freezing the pan part-way through the slide.
+PAN_TRAVEL = "(iw-iw/zoom)"
 
 
 def _fit_chain(sb: Storyboard) -> str:
@@ -26,9 +33,9 @@ def _zoom_expr(motion: str, frames: int) -> tuple[str, str, str]:
     if motion == "zoom-out":
         return (f"if(eq(on,0),{ZOOM_MAX},max(zoom-{step:.6f},1.0))", centre_x, centre_y)
     if motion == "pan-left":
-        return (f"{1 + PAN_SHIFT:.3f}", f"iw/2-(iw/zoom/2)-(on/{frames})*(iw*{PAN_SHIFT})", centre_y)
+        return (f"{PAN_ZOOM:.3f}", f"{PAN_TRAVEL}-(on/{frames})*{PAN_TRAVEL}", centre_y)
     if motion == "pan-right":
-        return (f"{1 + PAN_SHIFT:.3f}", f"iw/2-(iw/zoom/2)+(on/{frames})*(iw*{PAN_SHIFT})", centre_y)
+        return (f"{PAN_ZOOM:.3f}", f"(on/{frames})*{PAN_TRAVEL}", centre_y)
     return ("1", centre_x, centre_y)
 
 
@@ -42,7 +49,10 @@ def build_filtergraph(sb: Storyboard) -> tuple[str, str]:
         parts.append(
             f"[{i}:v]{_fit_chain(sb)},scale=8000:-1,"
             f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={width}x{height}:fps={fps},"
-            f"setsar=1[v{i}]"
+            # settb is load-bearing: concat emits timebase 1/1000000 while zoompan
+            # emits 1/fps, and xfade refuses mismatched input timebases. Without this
+            # a `cut` followed by a `fade` aborts the render.
+            f"setsar=1,settb=1/1000000[v{i}]"
         )
 
     current = "v0"

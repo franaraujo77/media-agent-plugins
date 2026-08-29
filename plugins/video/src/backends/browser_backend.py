@@ -1,4 +1,3 @@
-import html as html_lib
 import json
 from pathlib import Path
 
@@ -22,8 +21,8 @@ const SLIDES = {slides_json};
 const MOTION = {{
   'zoom-in':  ['scale(1)',            'scale(1.18)'],
   'zoom-out': ['scale(1.18)',         'scale(1)'],
-  'pan-left': ['scale(1.15) translateX(3%)',  'scale(1.15) translateX(-3%)'],
-  'pan-right':['scale(1.15) translateX(-3%)', 'scale(1.15) translateX(3%)'],
+  'pan-left': ['scale(1.15) translateX(6.5%)',  'scale(1.15) translateX(-6.5%)'],
+  'pan-right':['scale(1.15) translateX(-6.5%)', 'scale(1.15) translateX(6.5%)'],
   'none':     ['scale(1)',            'scale(1)'],
 }};
 const stage = document.getElementById('stage');
@@ -58,8 +57,11 @@ SLIDES.forEach((s, i) => {{
     anims.push(cap.animate(
       [{{opacity: 0, transform: 'translateY(40px)'}}, {{opacity: 1, transform: 'translateY(0)'}}],
       {{duration: 700, delay: start + 300, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both'}}));
+    // fill MUST be 'forwards', never 'both': a backwards fill pins opacity:1 over
+    // the whole period before the delay and, composited last, overrides the fade-in
+    // — every caption would then be visible from frame 0.
     anims.push(cap.animate([{{opacity: 1}}, {{opacity: 0}}],
-      {{duration: 500, delay: start + dur - 500, fill: 'both'}}));
+      {{duration: 500, delay: start + dur - 500, fill: 'forwards'}}));
   }}
 }});
 anims.forEach(a => a.pause());
@@ -73,7 +75,7 @@ def build_scene_html(sb: Storyboard) -> str:
     slides = [
         {
             "src": slide.image.resolve().as_uri(),
-            "caption": html_lib.escape(slide.caption) if slide.caption else "",
+            "caption": slide.caption or "",
             "seconds": slide.seconds,
             "motion": slide.motion,
             "transition_seconds": 0.0 if slide.transition == "cut" else slide.transition_seconds,
@@ -85,7 +87,11 @@ def build_scene_html(sb: Storyboard) -> str:
         height=sb.preset.height,
         fit="contain" if sb.fit == "contain" else "cover",
         caption_px=max(int(sb.preset.width * 0.045), 24),
-        slides_json=json.dumps(slides),
+        # Captions are assigned with textContent, which does no entity decoding, so
+        # they must NOT be HTML-escaped ("Tom & Jerry", "it's" must survive intact).
+        # Escaping "<" in the serialized JSON is what stops a caption containing
+        # "</script>" from breaking out of the script block.
+        slides_json=json.dumps(slides).replace("<", "\\u003c"),
     )
 
 

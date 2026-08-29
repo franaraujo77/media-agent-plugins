@@ -78,7 +78,7 @@ def collect_images(spec: str) -> list[Path]:
         found = [p for p in target.iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS]
     else:
         found = [Path(p) for p in glob.glob(spec)]
-    found = sorted(found, key=lambda p: p.name)
+    found = sorted(found)  # full-path lexicographic order, per the spec
     if not found:
         raise ValueError(f"No images matched {spec!r}")
     return found
@@ -88,6 +88,12 @@ def validate_images(slides: list[Slide]) -> None:
     missing = [str(s.image) for s in slides if not s.image.exists()]
     if missing:
         raise ValueError("Image files not found:\n  " + "\n  ".join(missing))
+
+
+def validate_audio(sb: "Storyboard") -> None:
+    """Fail with the module's actionable message rather than a raw `ffprobe failed`."""
+    if sb.audio is not None and not sb.audio.exists():
+        raise ValueError(f"Audio file not found:\n  {sb.audio}")
 
 
 CROP_WARN_THRESHOLD = 0.15
