@@ -16,6 +16,11 @@
       "name": "instagram",
       "description": "Skills for configuring Instagram integration and publishing carousel posts via the Meta Graph API.",
       "source": "./plugins/instagram"
+    },
+    {
+      "name": "video",
+      "description": "Skills for rendering images and audio into finished MP4 videos with local ffmpeg and Playwright.",
+      "source": "./plugins/video"
     }
   ]
 }
