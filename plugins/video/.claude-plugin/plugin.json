@@ -1,0 +1,7 @@
+{
+  "name": "video",
+  "version": "0.1.0",
+  "description": "Render images and audio into a finished MP4 using local ffmpeg and Playwright. No external AI service.",
+  "author": { "name": "francisaraujo", "email": "francis.araujo@gmail.com" },
+  "skills": ["./skills/video-render"]
+}
