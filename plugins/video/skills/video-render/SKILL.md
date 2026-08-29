@@ -16,22 +16,35 @@ Uses only local tooling — ffmpeg and Playwright. No external AI service.
    Otherwise collect: image glob or directory, optional audio file, and target preset
    (`reel`/`story` = 1080x1920, `square` = 1080x1080, `landscape` = 1920x1080).
 
-2. Run the renderer:
+2. Run the renderer. A storyboard path and `--images` are mutually exclusive — pass one or
+   the other:
 
    ```bash
    python3 plugins/video/src/video_render.py <argument>
    ```
 
-   Quick form:
+   Quick form (no storyboard file):
 
    ```bash
    python3 plugins/video/src/video_render.py \
      --images "assets/*.png" --audio output/episode.mp3 --preset reel
    ```
 
+   The quick form also accepts `--output <path>` (default `output/video.mp4`),
+   `--fit cover|contain`, `--backend ffmpeg|browser`, `--seconds <float>` (uniform per-slide
+   duration), and `--fps <int>`. These flags apply only to the `--images` quick form — when a
+   storyboard JSON path is given, it is loaded as-is and every other flag is ignored, so set
+   `output`, `fit`, `backend`, and `fps` inside the JSON instead.
+
 3. Report the backend line the script prints (`Backend: ffmpeg (...)` or
-   `Backend: browser (...)`) and any `Warning:` lines — crop warnings mean part of an
-   image is being cut off and the user may want `--fit contain`.
+   `Backend: browser (...)`), then watch for two different kinds of `Warning:` line and
+   don't conflate them:
+   - `Warning: <file>: ... discards N% of the image` — a crop warning (only under `fit:
+     cover`). Part of the image is being cut off; suggest `--fit contain` if that matters.
+   - `Warning: video is Xs but audio is Ys (...)` — a duration-drift warning, printed when
+     every slide has an explicit `seconds` and the total drifts from the audio by more than
+     0.5s. `--fit` is irrelevant here; the fix is to adjust the slides' `seconds` (or drop
+     them so duration is derived from the audio instead).
 
 4. Confirm `output/video.mp4` was written. If the script errors, report the full error message.
 
@@ -54,7 +67,9 @@ Uses only local tooling — ffmpeg and Playwright. No external AI service.
 `transition`: `fade` or `cut` — applies *into* the slide it is declared on, ignored on the first slide.
 
 Omit `seconds` on every slide with `audio` set and the audio duration is distributed
-evenly across the slides. Mixing explicit and omitted `seconds` with audio is an error.
+evenly across the slides. Mixing explicit and omitted `seconds` is an error only when
+`audio` is present; with no audio, an omitted `seconds` just takes the 4.0s default and
+mixing is fine.
 
 ## Backends
 
