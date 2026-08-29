@@ -186,7 +186,7 @@ Verified in probe: 270 frames captured in 27.2s, encoded in 2.0s.
 
 Images are fitted to the preset per `fit`: `cover` scales and center-crops, `contain` scales and pads with black.
 
-Under `cover`, when the crop discards more than 20% of the source area, a warning names the file and the discarded percentage. This is a real case rather than a hypothetical: Codex emits 1024x1536 (2:3) and 1254x1254 (1:1) images, and a 2:3 source into a 9:16 `reel` loses meaningful content. The warning surfaces it at render time instead of after publishing.
+Under `cover`, when the crop discards more than **15%** of the source area, a warning names the file and the discarded percentage. This is a real case rather than a hypothetical: Codex emits 1024x1536 (2:3) and 1254x1254 (1:1) images. The threshold is 15% rather than a rounder 20% because the motivating case sits between the two — a 2:3 source covering a 9:16 `reel` scales to 1280 wide and is cropped to 1080, discarding 15.6%. A 20% threshold would stay silent for exactly the case the warning exists to catch. A 1:1 source discards 43.75%. The warning surfaces this at render time instead of after publishing.
 
 ## Error Handling
 
@@ -224,7 +224,7 @@ TDD, following the existing suite's conventions (`conftest.py` puts the repo roo
 - Backend auto-selection: any caption selects browser; no captions selects ffmpeg; explicit choice overrides both.
 - **ffmpeg filtergraph guard** — the generated graph upscales before `zoompan`. Guards the jitter bug.
 - **Frame-difference test** — capture two frames at different timestamps and assert the bytes differ. This is the only test that catches the `animations="disabled"` bug, which passes every metadata-based check.
-- Cover-crop warning fires above 20% discarded, stays silent below.
+- Cover-crop warning fires for 1024x1536 (15.6% discarded) and 1254x1254 (43.75%), and stays silent for 1080x1800 (6.25%) and an exact 1080x1920.
 - Missing ffmpeg and missing Chromium produce the actionable messages.
 - **End-to-end smoke render** — two small generated images, 1s each, no audio, real ffmpeg. Asserts `ffprobe` reports the expected width, height, fps, frame count, and duration. This is a genuine render rather than a mock: it is local, fast, and free, and it is the only test proving the full pipeline works. Marked `@pytest.mark.integration` so it can be deselected.
 
