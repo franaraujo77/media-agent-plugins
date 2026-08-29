@@ -66,20 +66,93 @@ def frames_to_video(frames_dir: Path, fps: int, output: Path) -> Path:
     return output
 
 
-def mux_audio(video: Path, audio: Path | None, output: Path) -> Path:
+AUDIO_CODEC_ARGS = ["-c:a", "aac", "-b:a", "192k", "-ar", "48000"]
+TRACK_ATTRS = ("file", "volume", "start", "duration", "fade_in", "fade_out", "loop")
+
+
+def _as_track(track) -> dict | None:
+    """Accept a storyboard AudioTrack or a bare path. Duck-typed rather than
+    imported, because storyboard imports this module."""
+    if track is None:
+        return None
+    if isinstance(track, (str, Path)):
+        track = Path(track)
+        return {"file": track, "volume": 1.0, "start": 0.0, "duration": None,
+                "fade_in": 0.0, "fade_out": 0.0, "loop": False}
+    return {name: getattr(track, name) for name in TRACK_ATTRS}
+
+
+def _input_args(track: dict) -> list[str]:
+    args = []
+    if track["loop"]:
+        args += ["-stream_loop", "-1"]
+    if track["start"]:
+        args += ["-ss", str(track["start"])]
+    if track["duration"] is not None:
+        args += ["-t", str(track["duration"])]
+    return args + ["-i", str(track["file"])]
+
+
+def _filter_steps(track: dict, label: str, video_seconds: float | None) -> list[str]:
+    steps = []
+    if track["volume"] != 1.0:
+        steps.append(f"volume={track['volume']:g}")
+    if track["fade_in"]:
+        steps.append(f"afade=t=in:st=0:d={track['fade_in']}")
+    if track["fade_out"]:
+        # Fade from the end of whatever the track will actually play: its own
+        # trimmed length if one was set, else the length of the video it rides on.
+        length = track["duration"] if track["duration"] is not None else video_seconds
+        if length is None:
+            raise ValueError(
+                f"'{label}' sets fade_out but its length is unknown. Set 'duration' "
+                "on the track, or pass video_seconds to mux_audio()."
+            )
+        steps.append(f"afade=t=out:st={round(length - track['fade_out'], 3)}:d={track['fade_out']}")
+    return steps
+
+
+def mux_audio(video: Path, audio=None, output: Path = None, music=None,
+              video_seconds: float | None = None) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
-    if audio is None:
+    tracks = [(label, t) for label, t in
+              (("audio", _as_track(audio)), ("music", _as_track(music))) if t]
+
+    if not tracks:
         run_ffmpeg(["-i", str(video), "-c", "copy",
                     "-movflags", "+faststart", str(output)])
         return output
-    run_ffmpeg([
-        "-i", str(video),
-        "-i", str(audio),
-        "-map", "0:v", "-map", "1:a",
-        "-c:v", "copy",
-        "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
-        "-shortest",
-        "-movflags", "+faststart",
-        str(output),
-    ])
+
+    inputs = ["-i", str(video)]
+    for _, track in tracks:
+        inputs += _input_args(track)
+
+    chains = [_filter_steps(track, label, video_seconds) for label, track in tracks]
+    if tracks[0][0] == "music":
+        # A bed must never shorten the video: pad it with silence so that -shortest
+        # ends on the video rather than on a music file shorter than the slides.
+        chains[0].append("apad")
+
+    if len(tracks) == 1 and not chains[0]:
+        mapping = ["-map", "0:v", "-map", "1:a"]
+        graph = []
+    else:
+        # anull keeps a track that needs no processing addressable by the mixer.
+        parts = [f"[{i + 1}:a]{','.join(steps or ['anull'])}[a{i}]"
+                 for i, steps in enumerate(chains)]
+        if len(tracks) == 2:
+            # normalize=0 so the declared volumes are the ones you hear; amix
+            # otherwise divides every input by the number of inputs. duration=first
+            # ends the mix on the primary track — the bed never extends or truncates it.
+            parts.append("[a0][a1]amix=inputs=2:normalize=0:duration=first[aout]")
+        else:
+            parts[-1] = parts[-1].replace("[a0]", "[aout]")
+        graph = ["-filter_complex", ";".join(parts)]
+        mapping = ["-map", "0:v", "-map", "[aout]"]
+
+    run_ffmpeg(
+        inputs + graph + mapping
+        + ["-c:v", "copy"] + AUDIO_CODEC_ARGS
+        + ["-shortest", "-movflags", "+faststart", str(output)]
+    )
     return output

@@ -26,19 +26,78 @@ class Slide:
 
 
 @dataclass
+class AudioTrack:
+    """One audio input. `audio` is the primary track and sets the video's length;
+    `music` is a bed that is trimmed or looped to fit and never drives timing."""
+    file: Path
+    volume: float = 1.0
+    start: float = 0.0
+    duration: float | None = None
+    fade_in: float = 0.0
+    fade_out: float = 0.0
+    loop: bool = False
+
+
+@dataclass
 class Storyboard:
     preset: Preset
     slides: list[Slide]
-    audio: Path | None = None
+    audio: AudioTrack | None = None
     output: Path = DEFAULT_OUTPUT
     fit: str = "cover"
     backend: str | None = None
+    music: AudioTrack | None = None
 
 
 def _check(value: str, allowed: set[str], label: str) -> str:
     if value not in allowed:
         raise ValueError(f"Unknown {label} {value!r}. Allowed: {', '.join(sorted(allowed))}")
     return value
+
+
+TRACK_FIELDS = ("file", "volume", "start", "duration", "fade_in", "fade_out", "loop")
+# Every numeric field, with the bound it must satisfy. `duration` is a length, so
+# zero is as meaningless as a negative; the others may legitimately be zero.
+TRACK_MINIMUMS = {
+    "volume": (0.0, "cannot be negative"),
+    "start": (0.0, "cannot be negative"),
+    "fade_in": (0.0, "cannot be negative"),
+    "fade_out": (0.0, "cannot be negative"),
+}
+
+
+def _build_track(raw: str | dict | None, label: str) -> AudioTrack | None:
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        raw = {"file": raw}
+    if not isinstance(raw, dict):
+        raise ValueError(f"'{label}' must be a file path or an object, got {type(raw).__name__}")
+
+    unknown = [k for k in raw if k not in TRACK_FIELDS]
+    if unknown:
+        raise ValueError(
+            f"Unknown field(s) {', '.join(sorted(unknown))} in '{label}'. "
+            f"Allowed: {', '.join(TRACK_FIELDS)}"
+        )
+    if not raw.get("file"):
+        raise ValueError(f"'{label}' is missing the required 'file' field")
+
+    for field, (minimum, complaint) in TRACK_MINIMUMS.items():
+        if raw.get(field) is not None and float(raw[field]) < minimum:
+            raise ValueError(f"'{label}' {field} {raw[field]} {complaint}")
+    if raw.get("duration") is not None and float(raw["duration"]) <= 0:
+        raise ValueError(f"'{label}' duration {raw['duration']} must be greater than zero")
+
+    return AudioTrack(
+        file=Path(raw["file"]),
+        volume=float(raw.get("volume", 1.0)),
+        start=float(raw.get("start", 0.0)),
+        duration=float(raw["duration"]) if raw.get("duration") is not None else None,
+        fade_in=float(raw.get("fade_in", 0.0)),
+        fade_out=float(raw.get("fade_out", 0.0)),
+        loop=bool(raw.get("loop", False)),
+    )
 
 
 def _build_slide(raw: dict, index: int) -> Slide:
@@ -61,10 +120,11 @@ def build_storyboard(data: dict) -> Storyboard:
     return Storyboard(
         preset=resolve_preset(data.get("preset", DEFAULT_PRESET), data.get("fps")),
         slides=[_build_slide(raw, i) for i, raw in enumerate(raw_slides)],
-        audio=Path(data["audio"]) if data.get("audio") else None,
+        audio=_build_track(data.get("audio"), "audio"),
         output=Path(data.get("output", DEFAULT_OUTPUT)),
         fit=_check(data.get("fit", "cover"), FITS, "fit"),
         backend=data.get("backend"),
+        music=_build_track(data.get("music"), "music"),
     )
 
 
@@ -92,8 +152,18 @@ def validate_images(slides: list[Slide]) -> None:
 
 def validate_audio(sb: "Storyboard") -> None:
     """Fail with the module's actionable message rather than a raw `ffprobe failed`."""
-    if sb.audio is not None and not sb.audio.exists():
-        raise ValueError(f"Audio file not found:\n  {sb.audio}")
+    missing = [str(t.file) for t in (sb.audio, sb.music)
+               if t is not None and not t.file.exists()]
+    if missing:
+        raise ValueError("Audio file(s) not found:\n  " + "\n  ".join(missing))
+
+
+def effective_seconds(track: AudioTrack) -> float:
+    """How much of the track actually plays: an explicit `duration` if given,
+    otherwise whatever remains of the file after `start`."""
+    if track.duration is not None:
+        return track.duration
+    return max(probe_duration(track.file) - track.start, 0.0)
 
 
 CROP_WARN_THRESHOLD = 0.15
@@ -117,7 +187,7 @@ def resolve_durations(sb: Storyboard) -> Storyboard:
                 s.seconds = DEFAULT_SECONDS
         return sb
 
-    audio_seconds = probe_duration(sb.audio)
+    audio_seconds = effective_seconds(sb.audio)
 
     if explicit and omitted:
         raise ValueError(

@@ -50,7 +50,7 @@ def test_explicit_fields_are_kept(tmp_path):
                     "motion": "pan-left", "transition": "cut", "transition_seconds": 0.25}],
     }))
     assert sb.preset.name == "reel"
-    assert sb.audio == Path("output/episode.mp3")
+    assert sb.audio.file == Path("output/episode.mp3")
     assert sb.output == Path("out/x.mp4")
     assert sb.fit == "contain"
     assert sb.backend == "browser"

@@ -32,9 +32,11 @@ Uses only local tooling — ffmpeg and Playwright. No external AI service.
 
    The quick form also accepts `--output <path>` (default `output/video.mp4`),
    `--fit cover|contain`, `--backend ffmpeg|browser`, `--seconds <float>` (uniform per-slide
-   duration), and `--fps <int>`. These flags apply only to the `--images` quick form — passing
+   duration), `--fps <int>`, `--music <file>` (a bed mixed under `--audio`), and
+   `--music-volume <float>`. These flags apply only to the `--images` quick form — passing
    any of them together with a storyboard path is an **error**, not a silent override. Set
-   `output`, `fit`, `backend`, `audio`, `seconds`, and `fps` inside the JSON instead.
+   `output`, `fit`, `backend`, `audio`, `music`, `seconds`, and `fps` inside the JSON instead.
+   The remaining audio controls (trim, fades, loop) are storyboard-only — see **Audio tracks**.
 
 3. Report the backend line the script prints (`Backend: ffmpeg (...)` or
    `Backend: browser (...)`), then watch for two different kinds of `Warning:` line and
@@ -54,6 +56,7 @@ Uses only local tooling — ffmpeg and Playwright. No external AI service.
 {
   "preset": "reel",
   "audio": "output/episode.mp3",
+  "music": { "file": "assets/bed.mp3", "volume": 0.15, "loop": true, "fade_out": 2.0 },
   "output": "output/video.mp4",
   "fit": "cover",
   "slides": [
@@ -70,6 +73,37 @@ Omit `seconds` on every slide with `audio` set and the audio duration is distrib
 evenly across the slides. Mixing explicit and omitted `seconds` is an error only when
 `audio` is present; with no audio, an omitted `seconds` just takes the 4.0s default and
 mixing is fine.
+
+## Audio tracks
+
+There are two audio slots, and the difference between them is which one controls time:
+
+- **`audio`** — the primary track (narration, an episode MP3). It **sets the video's
+  length**: the slide-duration rules below are computed from it.
+- **`music`** — a bed mixed *under* `audio`. It **never** changes the length. Shorter than
+  the video, it is padded with silence (or set `loop`); longer, it is cut off.
+
+Either slot takes a bare path or an object. `"audio": "e.mp3"` and
+`"audio": {"file": "e.mp3"}` are the same thing.
+
+| Field | Default | Meaning |
+|---|---|---|
+| `file` | — | required; path to the audio file |
+| `volume` | `1.0` | linear gain. `0.15` is a typical bed under narration; `0.5` is −6 dB |
+| `start` | `0.0` | seconds to skip into the source before it starts playing |
+| `duration` | to the end | seconds to play, measured from `start` |
+| `fade_in` | `0.0` | seconds of fade up from silence |
+| `fade_out` | `0.0` | seconds of fade down at the end |
+| `loop` | `false` | repeat the file until the video ends |
+
+Gains are **not** renormalised when both slots are set — `volume` is what you hear, so a
+bed at `1.0` under narration will be as loud as the narration. Start around `0.15`.
+
+`start` and `duration` also shrink the duration budget: with `{"file": "e.mp3", "start":
+10}` on a 40s file, the video is built to the remaining 30s.
+
+A `fade_out` needs a known length. It is measured from the track's `duration` if set,
+otherwise from the video's length — so `fade_out` on a `music` bed with neither is an error.
 
 ## Backends
 
