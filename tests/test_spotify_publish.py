@@ -33,6 +33,30 @@ def test_build_description_empty_list():
     assert build_description([]) == ""
 
 
+def test_build_description_caps_at_limit():
+    items = [
+        {"title": f"Article {i}", "source": "ArXiv", "url": f"https://example.com/{i}", "summary": ""}
+        for i in range(500)
+    ]
+    result = build_description(items)
+    assert len(result) <= 4000
+
+
+def test_build_description_drops_whole_items_not_partial():
+    items = [
+        {"title": "Kept", "source": "ArXiv", "url": "https://a.com", "summary": ""},
+        {"title": "Dropped", "source": "ArXiv", "url": "https://b.com", "summary": ""},
+    ]
+    # Room for the first entry only
+    result = build_description(items, max_chars=len("- Kept (ArXiv)\n  https://a.com") + 5)
+    assert result == "- Kept (ArXiv)\n  https://a.com"
+
+
+def test_build_description_under_limit_keeps_everything():
+    items = [{"title": "Only", "source": "ArXiv", "url": "https://a.com", "summary": ""}]
+    assert build_description(items) == "- Only (ArXiv)\n  https://a.com"
+
+
 def test_load_credentials_reads_env_vars(monkeypatch):
     monkeypatch.setenv("SPOTIFY_EMAIL", "test@example.com")
     monkeypatch.setenv("SPOTIFY_PASSWORD", "secret123")

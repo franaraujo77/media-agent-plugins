@@ -26,4 +26,15 @@ Ensure these environment variables are set:
    ```
 
 2. Report the published episode URL on success. If the script errors, report the full error message.
-   If selectors fail (page structure changed), note which step failed and describe what was visible on the page.
+   If selectors fail (page structure changed), the script prints the failing step and saves a
+   screenshot plus the page HTML under `output/failures/` — read the screenshot to describe what was
+   actually on the page.
+
+3. If the script exits saying the episode already exists, do NOT re-run it. A previous run left a
+   draft on the show; report that it needs to be deleted or published manually first.
+
+## Notes
+
+- Episode descriptions are capped at 4000 characters (Spotify's limit). `build_description` drops
+  whole news items past the cap rather than truncating mid-URL — so a long news list silently
+  yields a shorter description.
