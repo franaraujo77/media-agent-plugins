@@ -13,6 +13,8 @@ Run the complete pipeline for the podcast defined in the config file provided as
 
 Invoke each skill in sequence. Stop and report the full error message if any step fails — do not continue to the next step.
 
+If step 4 reports `code=spotify_login_required` (Spotify wanted an emailed verification code), skip the cleanup, and make that exact line the last line of your final report. The prod-grade closing (`report.py prod-grade-ai-episode --code spotify_login_required`) reads it.
+
 1. Fetch news:
 
    Use the `Skill` tool with skill `media:news-fetch` and argument `<argument>`.

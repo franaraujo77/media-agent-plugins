@@ -41,6 +41,39 @@ class EpisodeAlreadyExists(Exception):
     """Raised when an episode with the same title is already on the show."""
 
 
+class SpotifyLoginRequired(Exception):
+    """Raised when Spotify asks for an emailed verification code: a person must log in at the Mac."""
+
+
+LOGIN_REQUIRED_CODE = "spotify_login_required"
+# Spotify's email-verification step: a one-time-code input, or the page text asking for the code.
+VERIFICATION_SELECTOR = (
+    'input[autocomplete="one-time-code"], input[name="otp"], '
+    'input[data-testid="verification-code-input"]'
+)
+LOGIN_STEP_TIMEOUT_MS = 30000
+
+
+def wait_for_login_step(page) -> str:
+    """After the email is submitted, wait briefly for the next login step.
+
+    Returns "password" or "wizard". Raises SpotifyLoginRequired on the email
+    verification prompt instead of waiting for someone to type the code.
+    """
+    page.wait_for_function(
+        "() => document.querySelector('#password') !== null || "
+        "      window.location.href.includes('episode/wizard') || "
+        f"      document.querySelector({json.dumps(VERIFICATION_SELECTOR)}) !== null || "
+        "      /verification code|6-digit code/i.test(document.body.innerText)",
+        timeout=LOGIN_STEP_TIMEOUT_MS,
+    )
+    if page.query_selector("#password"):
+        return "password"
+    if "episode/wizard" in page.url:
+        return "wizard"
+    raise SpotifyLoginRequired("Spotify asked for an email verification code")
+
+
 def capture_failure(page, step: str) -> Path | None:
     """Save a screenshot and the page HTML so an unattended failure is diagnosable."""
     try:
@@ -102,14 +135,8 @@ def publish(
                 page.click("#username")
                 page.keyboard.type(email, delay=50)
                 page.keyboard.press("Enter")
-                print("A browser window is open. Check your email for a verification code and enter it.")
-                # Wait for password form (after 2FA) or direct redirect to wizard
-                page.wait_for_function(
-                    "() => document.querySelector('#password') !== null || "
-                    "      window.location.href.includes('episode/wizard')",
-                    timeout=300000,
-                )
-                if page.query_selector("#password"):
+                # A verification prompt raises SpotifyLoginRequired right away.
+                if wait_for_login_step(page) == "password":
                     page.fill("#password", password)
                     page.click("button[type=submit]")
                 # Wait for any creators.spotify.com page (login complete)
@@ -158,7 +185,7 @@ def publish(
             page.wait_for_url("**/episodes", timeout=60000)
 
             episode_url = page.url
-        except EpisodeAlreadyExists:
+        except (EpisodeAlreadyExists, SpotifyLoginRequired):
             raise
         except Exception:
             capture_failure(page, step)
@@ -200,6 +227,14 @@ def run(config_path: str) -> None:
             description=description,
             audio_path=audio_path,
         )
+    except SpotifyLoginRequired:
+        print(
+            "Spotify asked for an email verification code, so the publish stopped. "
+            "Log in to Spotify for Creators at the Mac, then run it again.",
+            file=sys.stderr,
+        )
+        print(f"code={LOGIN_REQUIRED_CODE}")  # the final line: the report step reads it
+        sys.exit(3)
     except EpisodeAlreadyExists:
         sys.exit(
             f'Error: an episode titled "{episode_title}" already exists on this show '

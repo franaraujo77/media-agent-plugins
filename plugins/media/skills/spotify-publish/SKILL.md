@@ -33,6 +33,11 @@ Ensure these environment variables are set:
 3. If the script exits saying the episode already exists, do NOT re-run it. A previous run left a
    draft on the show; report that it needs to be deleted or published manually first.
 
+4. If the script exits with status 3 and its last line is `code=spotify_login_required`, Spotify asked
+   for an emailed verification code. Do NOT wait, retry or try to enter a code. Report that exact
+   `code=spotify_login_required` line as the last line of your answer: a person has to log in to
+   Spotify for Creators at the Mac.
+
 ## Notes
 
 - Episode descriptions are capped at 4000 characters (Spotify's limit). `build_description` drops
